@@ -1,7 +1,7 @@
 mod ast;
 
 fn main() {
-  let source = "(3.5 + 3.34);";
+  let source = "(3+3.5);";
 
   let mut lexer = ast::lexer::Lexer::new(source);
 

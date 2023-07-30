@@ -1,5 +1,3 @@
-use std::{iter::Peekable, str::Chars};
-
 use super::{token_type::TokenType, token::Token, text_span::TextSpan};
 
 /*
@@ -24,9 +22,9 @@ impl<'a> Lexer<'a> {
   pub fn new(source: &'a str) -> Self {
     Self {
       source,
+      tokens: vec![],
       start: 0,
       line: 0,
-      tokens: vec![],
       current: 0,
     }
   }
@@ -37,10 +35,13 @@ impl<'a> Lexer<'a> {
   At the end a final token of type **EOF** is added.
   */
   pub fn scan_tokens(&mut self) {
-    while !self.is_at_end() {
+    loop {
       self.start = self.current;
 
       self.scan_token();
+      if self.is_at_end() {
+        break;
+      }
     }
 
     self.tokens.push(Token::new(
@@ -57,8 +58,14 @@ impl<'a> Lexer<'a> {
   }
 
   fn scan_token(&mut self) {
-    let c = self.peek();
-    println!("Character: {}", &c);
+    let c = self.advance();
+
+    if c.is_ascii_digit() {
+      let number = self.number();
+
+      self.add_token(TokenType::Number(number));
+      return;
+    }
 
     match c {
       '(' => self.add_token(TokenType::LeftParen),
@@ -117,7 +124,7 @@ impl<'a> Lexer<'a> {
           TokenType::Bad
         };
 
-        self.add_token(token)
+        self.add_token(token);
       }
       '&' => {
         let token = if self.match_char('&') {
@@ -148,18 +155,8 @@ impl<'a> Lexer<'a> {
       // '"' => Self::string(self),
       '\n' => self.line += 1,
       ' ' | '\r' | '\t' => (),
-      _ => {
-        if Self::is_number(&c) {
-          let number = self.number();
-
-          self.add_token(TokenType::Number(number));
-        } else {
-          self.add_token(TokenType::Bad);
-        }
-      }
+      _ => self.add_token(TokenType::Bad),
     }
-
-    self.current += 1;
   }
 
   /**
@@ -170,7 +167,7 @@ impl<'a> Lexer<'a> {
   Otherwise, it increments `current` by one and returns true.
   */
   fn match_char(&mut self, c: char) -> bool {
-    if Self::is_at_end(self) || Self::peek(self) != c {
+    if self.is_at_end() || self.peek() != c {
       return false;
     }
 
@@ -180,12 +177,11 @@ impl<'a> Lexer<'a> {
   }
 
   /**
-  Method that gets the next character in the source code and returns it.
-  Next character in the source code and returns it.
+  Method that gets the current character in the source code and increments it into a `current`.
   */
   fn advance(&mut self) -> char {
     self.current += 1;
-    self.source.chars().nth(self.current).unwrap()
+    self.source.chars().nth(self.current - 1).unwrap_or('\0')
   }
 
   fn number(&mut self) -> f32 {
@@ -193,9 +189,7 @@ impl<'a> Lexer<'a> {
       self.advance();
     }
 
-    let next_char = self.peek_next().unwrap();
-
-    if self.match_char('.') && next_char.is_ascii_digit() {
+    if self.peek() == '.' && self.peek_next().is_ascii_digit() {
       self.advance();
 
       while self.peek().is_ascii_digit() {
@@ -206,16 +200,8 @@ impl<'a> Lexer<'a> {
     self.source[self.start..self.current].parse().unwrap()
   }
 
-  fn peek_next(&self) -> Option<char> {
-    if self.current + 1 > self.source.len() {
-      return None;
-    }
-
-    self.source.chars().nth(self.current + 1)
-  }
-
-  fn is_number(c: &char) -> bool {
-    c.is_ascii_digit()
+  fn peek_next(&self) -> char {
+    self.source.chars().nth(self.current + 1).unwrap_or('\0')
   }
 
   /**
@@ -235,7 +221,7 @@ impl<'a> Lexer<'a> {
   It takes the text of the current lexeme and creates a new token.
   */
   fn add_token(&mut self, kind: TokenType) {
-    let literal = self.source[self.start..self.current + 1].to_string();
+    let literal = self.source[self.start..self.current].to_string();
 
     self.tokens.push(Token::new(
       kind,
