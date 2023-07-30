@@ -2,16 +2,15 @@ use std::{iter::Peekable, str::Chars};
 
 use super::{token_type::TokenType, token::Token, text_span::TextSpan};
 
-
 /*
-  * Scanner
-  *
-  * The `start` and `current` variables allow each **string** to be indexed.
-  *
-  * - start: points to the first character of the lexeme being scanned
-  * - current: points to the character currently being checked.
-  * - line: traces the source line of `current` to know the location of the
-  * **tokens**.
+ * Lexer
+ *
+ * The `start` and `current` variables allow each **string** to be indexed.
+ *
+ * - start: points to the first character of the lexeme being scanned
+ * - current: points to the character currently being checked.
+ * - line: traces the source line of `current` to know the location of the
+ * **tokens**.
 */
 pub struct Lexer<'a> {
   source: &'a str,
@@ -33,9 +32,11 @@ impl<'a> Lexer<'a> {
   }
 
   /**
-  *
+  The scanner checks all characters in the code and
+  enlarges tokens until it runs out of characters.
+  At the end a final token of type **EOF** is added.
   */
-  pub fn scanTokens(&mut self) {
+  pub fn scan_tokens(&mut self) {
     while !self.is_at_end() {
       self.start = self.current;
 
@@ -44,10 +45,13 @@ impl<'a> Lexer<'a> {
 
     self.tokens.push(Token::new(
       TokenType::Eof,
-      TextSpan::new(0, 0, 0, '\0'.to_string()),
+      TextSpan::new(0, 0, self.line, '\0'.to_string()),
     ));
   }
 
+  /**
+  Help function that checks that all characters have been completed.
+  */
   fn is_at_end(&self) -> bool {
     self.current >= self.source.len()
   }
@@ -158,6 +162,13 @@ impl<'a> Lexer<'a> {
     self.current += 1;
   }
 
+  /**
+  This method receives a character.
+  It checks if the next character is a space or a line break
+  or if the next character does not match the one passed by parameter,
+  if these cases are met then it returns `false`.
+  Otherwise, it increments `current` by one and returns true.
+  */
   fn match_char(&mut self, c: char) -> bool {
     if Self::is_at_end(self) || Self::peek(self) != c {
       return false;
@@ -168,6 +179,10 @@ impl<'a> Lexer<'a> {
     true
   }
 
+  /**
+  Method that gets the next character in the source code and returns it.
+  Next character in the source code and returns it.
+  */
   fn advance(&mut self) -> char {
     self.current += 1;
     self.source.chars().nth(self.current).unwrap()
@@ -203,6 +218,10 @@ impl<'a> Lexer<'a> {
     c.is_ascii_digit()
   }
 
+  /**
+  This method takes returns the current character
+  if it is not a line break.
+  */
   fn peek(&self) -> char {
     if self.is_at_end() {
       '\0'
@@ -211,6 +230,10 @@ impl<'a> Lexer<'a> {
     }
   }
 
+  /**
+  Where `advance()` is for input, `addToken()` is for output.
+  It takes the text of the current lexeme and creates a new token.
+  */
   fn add_token(&mut self, kind: TokenType) {
     let literal = self.source[self.start..self.current + 1].to_string();
 

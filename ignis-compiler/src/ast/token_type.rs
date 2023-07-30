@@ -1,4 +1,6 @@
-
+/**
+  TokenType
+*/
 #[derive(Debug)]
 pub enum TokenType {
   // Single-character tokens
@@ -12,24 +14,24 @@ pub enum TokenType {
   RightBrace, // }
   LeftBrack,  // [
   RightBrack, // ]
-  Colon, // :
+  Colon,      // :
 
   // One or two character tokens
-  Equal, // =
-  EqualEqual, // ==
-  Bang,          // !
+  Equal,        // =
+  EqualEqual,   // ==
+  Bang,         // !
   BangEqual,    // !=
-  Greater,       // >
+  Greater,      // >
   GreaterEqual, // >=
-  Less,          // <
+  Less,         // <
   LessEqual,    // <=
-  Or,            // ||
-  And,           // &&
+  Or,           // ||
+  And,          // &&
 
   // Separator
-  Comma, // ,
+  Comma,     // ,
   SemiColon, // ;
-  Dot, // .
+  Dot,       // .
 
   // Literals
   Number(f32),

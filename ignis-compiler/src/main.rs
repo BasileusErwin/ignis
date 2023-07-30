@@ -5,7 +5,7 @@ fn main() {
 
   let mut lexer = ast::lexer::Lexer::new(source);
 
-  lexer.scanTokens();
+  lexer.scan_tokens();
 
   for token in lexer.tokens {
     println!("{:?}", token);
