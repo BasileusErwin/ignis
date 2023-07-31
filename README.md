@@ -2,6 +2,18 @@
 
 ## Roadmap
 
+### Goals
+
+- [ ] TypeScript-like syntax
+- [ ] Compiled
+- [ ] Static and strict typing
+- [ ] Possibility of transpiling to Lua and compability with neovim
+- [ ] Scripting capability
+- [ ] Extensive standard library
+- [ ]
+- [ ]
+
+
 ### 07/28/2023
 
 - [ ] Lexer

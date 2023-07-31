@@ -1,4 +1,8 @@
-use super::{token_type::TokenType, token::Token, text_span::TextSpan};
+pub mod text_span;
+pub mod token;
+pub mod token_type;
+
+use super::lexer::{text_span::TextSpan, token::Token, token_type::TokenType};
 
 /*
  * Lexer
@@ -99,6 +103,8 @@ impl<'a> Lexer<'a> {
       '=' => {
         let token = if self.match_char('=') {
           TokenType::EqualEqual
+        } else if self.match_char('>') {
+          TokenType::Arrow
         } else {
           TokenType::Equal
         };
@@ -127,7 +133,7 @@ impl<'a> Lexer<'a> {
         let token = if self.match_char('|') {
           TokenType::Or
         } else {
-          TokenType::Bad
+          TokenType::Pipe
         };
 
         self.add_token(token);
@@ -136,7 +142,7 @@ impl<'a> Lexer<'a> {
         let token = if self.match_char('&') {
           TokenType::And
         } else {
-          TokenType::Bad
+          TokenType::Ampersand
         };
 
         self.add_token(token)
@@ -186,6 +192,20 @@ impl<'a> Lexer<'a> {
       "const" => Some(TokenType::Const),
       "while" => Some(TokenType::While),
       "enum" => Some(TokenType::Enum),
+      "export" => Some(TokenType::Export),
+      "import" => Some(TokenType::Import),
+      "from" => Some(TokenType::From),
+      "mut" => Some(TokenType::Mut),
+      "as" => Some(TokenType::As),
+      "break" => Some(TokenType::Break),
+      "readonly" => Some(TokenType::ReadOnly),
+      "static" => Some(TokenType::Static),
+      "final" => Some(TokenType::Final),
+      "public" => Some(TokenType::Public),
+      "private" => Some(TokenType::Private),
+      "interface" => Some(TokenType::Interface),
+      "extends" => Some(TokenType::Extends),
+      "implements" => Some(TokenType::Implements),
       _ => None,
     }
   }
@@ -196,7 +216,7 @@ impl<'a> Lexer<'a> {
     }
 
     let value: String = self.source[self.start..self.current].to_string();
-    let mut kind: Option<TokenType> = Self::get_keyword(value.as_str());
+    let kind: Option<TokenType> = Self::get_keyword(value.as_str());
 
     kind.unwrap_or(TokenType::Identifier)
   }
@@ -266,11 +286,7 @@ impl<'a> Lexer<'a> {
   if it is not a line break.
   */
   fn peek(&self) -> char {
-    if self.is_at_end() {
-      '\0'
-    } else {
-      self.source.chars().nth(self.current).unwrap()
-    }
+    self.source.chars().nth(self.current).unwrap_or('\0')
   }
 
   /**

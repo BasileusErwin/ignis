@@ -2,8 +2,8 @@ use super::{token_type::TokenType, text_span::TextSpan};
 
 #[derive(Debug)]
 pub struct Token {
-  kind: TokenType,
-  span: TextSpan,
+  pub kind: TokenType,
+  pub span: TextSpan,
 }
 
 impl Token {

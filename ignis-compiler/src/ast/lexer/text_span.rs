@@ -16,7 +16,7 @@ impl TextSpan {
     }
   }
 
-  pub fn lenght(&self) -> usize {
+  pub fn _lenght(&self) -> usize {
     self.end - self.start
   }
 }

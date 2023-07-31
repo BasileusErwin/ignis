@@ -15,6 +15,8 @@ pub enum TokenType {
   LeftBrack,  // [
   RightBrack, // ]
   Colon,      // :
+  Pipe,       // |
+  Ampersand,  // &
 
   // One or two character tokens
   Equal,        // =
@@ -27,6 +29,7 @@ pub enum TokenType {
   LessEqual,    // <=
   Or,           // ||
   And,          // &&
+  Arrow,        // =>
 
   // Separator
   Comma,     // ,
@@ -37,12 +40,17 @@ pub enum TokenType {
   Number(f32),
   Int(i32),    // 1-10
   Double(f32), // 1.3
-  Char(char),  // c
+  Char(char),  // a-z A-Z 0-9
   String(String),
 
   // Keywords
   Class,
   Super,
+  Static,
+  Final,
+  ReadOnly,
+  Public,
+  Private,
   Else,
   False,
   True,
@@ -54,8 +62,17 @@ pub enum TokenType {
   This,
   Let,
   Const,
+  Mut,
+  As,
   While,
+  Break,
   Enum,
+  Export,
+  Import,
+  From,
+  Extends,
+  Implements,
+  Interface,
 
   Bad,
   Identifier,
