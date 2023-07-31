@@ -67,6 +67,12 @@ impl<'a> Lexer<'a> {
       return;
     }
 
+    if c.is_alphabetic() {
+      let kind: TokenType = self.identifier();
+      self.add_token(kind);
+      return;
+    }
+
     match c {
       '(' => self.add_token(TokenType::LeftParen),
       ')' => self.add_token(TokenType::RightParen),
@@ -152,11 +158,62 @@ impl<'a> Lexer<'a> {
           self.add_token(TokenType::Slash)
         }
       }
-      // '"' => Self::string(self),
+      '"' => {
+        if let Some(string) = self.string() {
+          self.add_token(TokenType::String(string));
+        }
+      }
       '\n' => self.line += 1,
       ' ' | '\r' | '\t' => (),
       _ => self.add_token(TokenType::Bad),
     }
+  }
+
+  fn get_keyword(key: &str) -> Option<TokenType> {
+    match key {
+      "class" => Some(TokenType::Class),
+      "super" => Some(TokenType::Super),
+      "else" => Some(TokenType::Else),
+      "false" => Some(TokenType::False),
+      "true" => Some(TokenType::True),
+      "function" => Some(TokenType::Function),
+      "for" => Some(TokenType::For),
+      "if" => Some(TokenType::If),
+      "null" => Some(TokenType::Null),
+      "return" => Some(TokenType::Return),
+      "this" => Some(TokenType::This),
+      "let" => Some(TokenType::Let),
+      "const" => Some(TokenType::Const),
+      "while" => Some(TokenType::While),
+      "enum" => Some(TokenType::Enum),
+      _ => None,
+    }
+  }
+
+  fn identifier(&mut self) -> TokenType {
+    while self.peek().is_alphanumeric() {
+      self.advance();
+    }
+
+    let value: String = self.source[self.start..self.current].to_string();
+    let mut kind: Option<TokenType> = Self::get_keyword(value.as_str());
+
+    kind.unwrap_or(TokenType::Identifier)
+  }
+
+  fn string(&mut self) -> Option<String> {
+    while self.peek() != '\"' && !self.is_at_end() {
+      self.advance();
+    }
+
+    if self.is_at_end() {
+      // TODO: Error
+      return None;
+    }
+
+    self.advance();
+
+    Some(self.source[self.start..self.current].to_string())
   }
 
   /**

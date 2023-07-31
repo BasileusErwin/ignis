@@ -38,6 +38,7 @@ pub enum TokenType {
   Int(i32),    // 1-10
   Double(f32), // 1.3
   Char(char),  // c
+  String(String),
 
   // Keywords
   Class,
@@ -54,6 +55,7 @@ pub enum TokenType {
   Let,
   Const,
   While,
+  Enum,
 
   Bad,
   Identifier,

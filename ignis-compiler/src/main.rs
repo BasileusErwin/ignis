@@ -1,8 +1,9 @@
 mod ast;
 
 fn main() {
-  let source = "(3+3.5);";
+  let source = "let helloWorld = \"Hello World\";";
 
+  println!("Source: {}", &source);
   let mut lexer = ast::lexer::Lexer::new(source);
 
   lexer.scan_tokens();
