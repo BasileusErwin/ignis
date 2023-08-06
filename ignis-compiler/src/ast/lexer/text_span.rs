@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TextSpan {
   pub start: usize,
   pub end: usize,

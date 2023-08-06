@@ -1,7 +1,7 @@
 /**
   TokenType
 */
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
   // Single-character tokens
   Plus,       // +
@@ -37,11 +37,11 @@ pub enum TokenType {
   Dot,       // .
 
   // Literals
-  Number(f32),
-  Int(i32),    // 1-10
-  Double(f32), // 1.3
-  Char(char),  // a-z A-Z 0-9
-  String(String),
+  Number,
+  Int,    // 1-10
+  Double, // 1.3
+  Char,  // a-z A-Z 0-9
+  String,
 
   // Keywords
   Class,

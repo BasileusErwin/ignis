@@ -10,9 +10,17 @@
 - [ ] Possibility of transpiling to Lua and compability with neovim
 - [ ] Scripting capability
 - [ ] Extensive standard library
-- [ ]
-- [ ]
-
+    - [ ] A good library http
+    - [ ] Test library
+    - [ ] CLI library
+    - [ ] IO
+    - [ ] Memory management
+    - [ ] Env
+    - [ ] Regex
+    - [ ] Math
+    - [ ] Time
+    - [ ] Primitive
+- [ ] "Package" manager
 
 ### 07/28/2023
 
@@ -27,6 +35,17 @@
 
 - [X] Lexer
 - [ ] Parser
+
+```typescript
+let value = 7 + (30 - 3) * 4;
+let helloWorld = "Hello World";
+```
+
+### 08/06/2023
+
+- [X] Lexer
+- [X] Parser expressions
+- [ ] Parser statements
 
 ```typescript
 let value = 7 + (30 - 3) * 4;

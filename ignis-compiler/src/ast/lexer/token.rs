@@ -1,6 +1,6 @@
 use super::{token_type::TokenType, text_span::TextSpan};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Token {
   pub kind: TokenType,
   pub span: TextSpan,

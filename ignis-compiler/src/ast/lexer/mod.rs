@@ -62,12 +62,12 @@ impl<'a> Lexer<'a> {
   }
 
   fn scan_token(&mut self) {
-    let c = self.advance();
+    let c: char = self.advance();
 
     if c.is_ascii_digit() {
-      let number = self.number();
+      let number: f64 = self.number();
 
-      self.add_token(TokenType::Number(number));
+      self.add_token(TokenType::Number);
       return;
     }
 
@@ -92,7 +92,7 @@ impl<'a> Lexer<'a> {
       '*' => self.add_token(TokenType::Asterisk),
       ':' => self.add_token(TokenType::Colon),
       '!' => {
-        let token = if self.match_char('=') {
+        let token: TokenType = if self.match_char('=') {
           TokenType::BangEqual
         } else {
           TokenType::Bang
@@ -101,7 +101,7 @@ impl<'a> Lexer<'a> {
         self.add_token(token)
       }
       '=' => {
-        let token = if self.match_char('=') {
+        let token: TokenType = if self.match_char('=') {
           TokenType::EqualEqual
         } else if self.match_char('>') {
           TokenType::Arrow
@@ -112,7 +112,7 @@ impl<'a> Lexer<'a> {
         self.add_token(token)
       }
       '<' => {
-        let token = if self.match_char('=') {
+        let token: TokenType = if self.match_char('=') {
           TokenType::LessEqual
         } else {
           TokenType::Less
@@ -121,7 +121,7 @@ impl<'a> Lexer<'a> {
         self.add_token(token)
       }
       '>' => {
-        let token = if self.match_char('=') {
+        let token: TokenType = if self.match_char('=') {
           TokenType::GreaterEqual
         } else {
           TokenType::Greater
@@ -166,7 +166,7 @@ impl<'a> Lexer<'a> {
       }
       '"' => {
         if let Some(string) = self.string() {
-          self.add_token(TokenType::String(string));
+          self.add_token(TokenType::String);
         }
       }
       '\n' => self.line += 1,
@@ -261,7 +261,7 @@ impl<'a> Lexer<'a> {
     self.source.chars().nth(self.current - 1).unwrap_or('\0')
   }
 
-  fn number(&mut self) -> f32 {
+  fn number(&mut self) -> f64 {
     while self.peek().is_ascii_digit() {
       self.advance();
     }
@@ -300,5 +300,82 @@ impl<'a> Lexer<'a> {
       kind,
       TextSpan::new(self.start, self.current, self.line, literal),
     ));
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_valid_indentifiers() {
+    let source: &str = "let helloWorld = \"Hello World\";";
+    let mut lexer: Lexer<'_> = Lexer::new(source);
+    lexer.scan_tokens();
+
+    assert_eq!(lexer.tokens.len(), 6);
+    assert_eq!(lexer.tokens[0].kind, TokenType::Let);
+    assert_eq!(lexer.tokens[1].kind, TokenType::Identifier);
+    assert_eq!(lexer.tokens[2].kind, TokenType::Equal);
+
+    assert_eq!(
+      lexer.tokens[3].kind,
+      TokenType::String
+    );
+    assert_eq!(lexer.tokens[3].span.literal, "\"Hello World\"".to_string());
+
+    assert_eq!(lexer.tokens[4].kind, TokenType::SemiColon);
+    assert_eq!(lexer.tokens[5].kind, TokenType::Eof);
+  }
+
+  #[test]
+  fn test_valid_expression() {
+    let source: &str = "(3 + 5) * 12;";
+    let mut lexer: Lexer<'_> = Lexer::new(source);
+    lexer.scan_tokens();
+
+    assert_eq!(lexer.tokens.len(), 9);
+    assert_eq!(lexer.tokens[0].kind, TokenType::LeftParen);
+    assert_eq!(lexer.tokens[1].kind, TokenType::Number);
+    assert_eq!(lexer.tokens[1].span.literal, "3".to_string());
+
+    assert_eq!(lexer.tokens[2].kind, TokenType::Plus);
+
+    assert_eq!(lexer.tokens[3].kind, TokenType::Number);
+    assert_eq!(lexer.tokens[3].span.literal, "5".to_string());
+
+    assert_eq!(lexer.tokens[4].kind, TokenType::RightParen);
+    assert_eq!(lexer.tokens[5].kind, TokenType::Asterisk);
+
+    assert_eq!(lexer.tokens[6].kind, TokenType::Number);
+    assert_eq!(lexer.tokens[6].span.literal, "12".to_string());
+
+    assert_eq!(lexer.tokens[7].kind, TokenType::SemiColon);
+    assert_eq!(lexer.tokens[8].kind, TokenType::Eof);
+  }
+
+  #[test]
+  fn test_valid_null() {
+    let source: &str = "null";
+    let mut lexer: Lexer<'_> = Lexer::new(source);
+    lexer.scan_tokens();
+
+    assert_eq!(lexer.tokens.len(), 2);
+    assert_eq!(lexer.tokens[0].kind, TokenType::Null);
+    assert_eq!(lexer.tokens[1].kind, TokenType::Eof);
+  }
+
+  #[test]
+  fn test_valid_key_boolean() {
+    let source: &str = "false; true;";
+    let mut lexer: Lexer<'_> = Lexer::new(source);
+    lexer.scan_tokens();
+
+    assert_eq!(lexer.tokens.len(), 5);
+    assert_eq!(lexer.tokens[0].kind, TokenType::False);
+    assert_eq!(lexer.tokens[1].kind, TokenType::SemiColon);
+    assert_eq!(lexer.tokens[2].kind, TokenType::True);
+    assert_eq!(lexer.tokens[3].kind, TokenType::SemiColon);
+    assert_eq!(lexer.tokens[4].kind, TokenType::Eof);
   }
 }
