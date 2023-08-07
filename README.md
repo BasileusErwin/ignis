@@ -51,3 +51,12 @@ let helloWorld = "Hello World";
 let value = 7 + (30 - 3) * 4;
 let helloWorld = "Hello World";
 ```
+
+### 08/06/2023
+
+- [X] Lexer
+- [X] Parser expressions
+- [X] Parser statements
+- [ ] Parser functions
+- [ ] Interpreter
+
