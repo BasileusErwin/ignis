@@ -64,19 +64,6 @@ impl<'a> Lexer<'a> {
   fn scan_token(&mut self) {
     let c: char = self.advance();
 
-    if c.is_ascii_digit() {
-      self.number();
-
-      self.add_token(TokenType::Number);
-      return;
-    }
-
-    if c.is_alphabetic() {
-      let kind: TokenType = self.identifier();
-      self.add_token(kind);
-      return;
-    }
-
     match c {
       '(' => self.add_token(TokenType::LeftParen),
       ')' => self.add_token(TokenType::RightParen),
@@ -88,9 +75,18 @@ impl<'a> Lexer<'a> {
       '.' => self.add_token(TokenType::Dot),
       ';' => self.add_token(TokenType::SemiColon),
       '-' => self.add_token(TokenType::Minus),
-      '+' => self.add_token(TokenType::Plus),
+      '+' => {
+        let token: TokenType = if self.match_char('=') {
+          TokenType::Increment
+        } else {
+          TokenType::Plus
+        };
+
+        self.add_token(token);
+      },
       '*' => self.add_token(TokenType::Asterisk),
       ':' => self.add_token(TokenType::Colon),
+      '%' => self.add_token(TokenType::Mod),
       '!' => {
         let token: TokenType = if self.match_char('=') {
           TokenType::BangEqual
@@ -171,7 +167,22 @@ impl<'a> Lexer<'a> {
       }
       '\n' => self.line += 1,
       ' ' | '\r' | '\t' => (),
-      _ => self.add_token(TokenType::Bad),
+      _ => {
+        if c.is_ascii_digit() {
+          self.number();
+
+          self.add_token(TokenType::Number);
+          return;
+        }
+
+        if self.is_identifier_starter() {
+          let kind: TokenType = self.identifier();
+          self.add_token(kind);
+          return;
+        }
+
+        self.add_token(TokenType::Bad)
+      }
     }
   }
 
@@ -184,6 +195,7 @@ impl<'a> Lexer<'a> {
       "true" => Some(TokenType::True),
       "function" => Some(TokenType::Function),
       "for" => Some(TokenType::For),
+      "in" => Some(TokenType::In),
       "if" => Some(TokenType::If),
       "null" => Some(TokenType::Null),
       "return" => Some(TokenType::Return),
@@ -219,7 +231,7 @@ impl<'a> Lexer<'a> {
   fn is_identifier_starter(&self) -> bool {
     let c: char = self.peek();
 
-    (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+    (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_')
   }
 
   fn is_identifier_letter(&self) -> bool {

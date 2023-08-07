@@ -17,6 +17,7 @@ pub enum TokenType {
   Colon,      // :
   Pipe,       // |
   Ampersand,  // &
+  Mod,        // %
 
   // One or two character tokens
   Equal,        // =
@@ -30,6 +31,7 @@ pub enum TokenType {
   Or,           // ||
   And,          // &&
   Arrow,        // =>
+  Increment,    // +=
 
   // Separator
   Comma,     // ,
@@ -64,6 +66,7 @@ pub enum TokenType {
   True,
   Function,
   For,
+  In,
   If,
   Null,
   Return,
