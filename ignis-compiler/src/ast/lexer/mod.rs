@@ -65,7 +65,7 @@ impl<'a> Lexer<'a> {
     let c: char = self.advance();
 
     if c.is_ascii_digit() {
-      let number: f64 = self.number();
+      self.number();
 
       self.add_token(TokenType::Number);
       return;
@@ -165,7 +165,7 @@ impl<'a> Lexer<'a> {
         }
       }
       '"' => {
-        if let Some(string) = self.string() {
+        if let Some(_) = self.string() {
           self.add_token(TokenType::String);
         }
       }
@@ -210,8 +210,20 @@ impl<'a> Lexer<'a> {
     }
   }
 
+  fn is_identifier_starter(&self) -> bool {
+    let c: char = self.peek();
+
+    (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+  }
+
+  fn is_identifier_letter(&self) -> bool {
+    let c: char = self.peek();
+
+    (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_')
+  }
+
   fn identifier(&mut self) -> TokenType {
-    while self.peek().is_alphanumeric() {
+    while self.is_identifier_starter() || self.is_identifier_letter() {
       self.advance();
     }
 
@@ -261,7 +273,7 @@ impl<'a> Lexer<'a> {
     self.source.chars().nth(self.current - 1).unwrap_or('\0')
   }
 
-  fn number(&mut self) -> f64 {
+  fn number(&mut self) -> () {
     while self.peek().is_ascii_digit() {
       self.advance();
     }
@@ -273,8 +285,6 @@ impl<'a> Lexer<'a> {
         self.advance();
       }
     }
-
-    self.source[self.start..self.current].parse().unwrap()
   }
 
   fn peek_next(&self) -> char {
@@ -318,10 +328,7 @@ mod tests {
     assert_eq!(lexer.tokens[1].kind, TokenType::Identifier);
     assert_eq!(lexer.tokens[2].kind, TokenType::Equal);
 
-    assert_eq!(
-      lexer.tokens[3].kind,
-      TokenType::String
-    );
+    assert_eq!(lexer.tokens[3].kind, TokenType::String);
     assert_eq!(lexer.tokens[3].span.literal, "\"Hello World\"".to_string());
 
     assert_eq!(lexer.tokens[4].kind, TokenType::SemiColon);

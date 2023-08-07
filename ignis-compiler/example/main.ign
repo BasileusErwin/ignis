@@ -1,0 +1,3 @@
+function main() {
+  let helloWorld = "Hello World";
+}

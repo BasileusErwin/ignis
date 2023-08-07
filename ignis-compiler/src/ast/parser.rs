@@ -2,7 +2,9 @@ use super::{
   lexer::{token::Token, token_type::TokenType},
   expression::{
     Expression, binary::Binary, unary::Unary, literal::Literal, LiteralValue, grouping::Grouping,
+    self,
   },
+  statement::{Statement, variable::Variable, expression::ExpressionStatement, self},
 };
 
 pub struct Parser {
@@ -27,9 +29,25 @@ impl Parser {
     Self { tokens, current: 0 }
   }
 
-  pub fn parse(&mut self) -> Result<Expression, ParserError> {
-    println!("{:?}", self.tokens);
-    self.expression()
+  pub fn parse(&mut self) -> Result<Vec<Statement>, Vec<ParserError>> {
+    let mut statements: Vec<Statement> = vec![];
+    let mut error: Vec<ParserError> = vec![];
+
+    while !self.is_at_end() {
+      match self.declaration() {
+        Ok(statement) => statements.push(statement),
+        Err(err) => {
+          error.push(err);
+          self.synchronize();
+        }
+      }
+    }
+
+    if error.len() == 0 {
+      Ok(statements)
+    } else {
+      Err(error)
+    }
   }
 
   fn expression(&mut self) -> Result<Expression, ParserError> {
@@ -141,15 +159,86 @@ impl Parser {
     }
   }
 
-  fn consume(&mut self, kind: TokenType, message: String) -> Result<(), ParserError> {
-    let token = self.peek();
-    println!("Consume: {}", token.kind == kind);
-    if token.kind == kind {
+  fn synchronize(&mut self) {
+    self.advance();
+
+    while !self.is_at_end() {
+      if self.previous().kind == TokenType::SemiColon {
+        return;
+      }
+
+      match self.peek().kind {
+        TokenType::Class
+        | TokenType::Function
+        | TokenType::Let
+        | TokenType::Const
+        | TokenType::For
+        | TokenType::If
+        | TokenType::Return => return,
+        _ => (),
+      };
+
       self.advance();
-      return Ok(());
+    }
+  }
+
+  fn declaration(&mut self) -> Result<Statement, ParserError> {
+    if self.match_token(&[TokenType::Let, TokenType::Const]) {
+      return self.variableDeclaration();
     }
 
-    Err(ParserError::new(message, self.peek()))
+    self.statement()
+  }
+
+  fn variableDeclaration(&mut self) -> Result<Statement, ParserError> {
+    let name: Token = self.consume(TokenType::Identifier, "Expect varible name.".to_string())?;
+
+    let mut initializer: Option<Expression> = None;
+
+    if self.match_token(&[TokenType::Equal]) {
+      initializer = Some(self.expression()?);
+    }
+
+    self.consume(
+      TokenType::SemiColon,
+      "Expect ';' after variable declaration".to_string(),
+    )?;
+
+    if let Some(ini) = initializer {
+      Ok(Statement::Variable(Variable::new(
+        Box::new(name),
+        Box::new(ini),
+      )))
+    } else {
+      Err(ParserError::new("Expect expression.".to_string(), name))
+    }
+  }
+
+  fn statement(&mut self) -> Result<Statement, ParserError> {
+    self.expression_statement()
+  }
+
+  fn expression_statement(&mut self) -> Result<Statement, ParserError> {
+    let expression = self.expression()?;
+
+    self.consume(
+      TokenType::SemiColon,
+      "Expect ';' after expression.".to_string(),
+    );
+
+    Ok(Statement::Expression(ExpressionStatement::new(Box::new(
+      expression,
+    ))))
+  }
+
+  fn consume(&mut self, kind: TokenType, message: String) -> Result<Token, ParserError> {
+    let token: Token = self.peek();
+    if token.kind == kind {
+      self.advance();
+      return Ok(token);
+    }
+
+    Err(ParserError::new(message, token))
   }
 
   fn peek(&mut self) -> Token {
@@ -189,242 +278,5 @@ impl Parser {
 
   fn previous(&mut self) -> Token {
     self.tokens[self.current - 1].clone()
-  }
-}
-
-#[cfg(test)]
-mod tests {
-  use crate::ast::lexer::text_span::TextSpan;
-  use super::*;
-
-  #[test]
-  fn test_valid_expression_one() {
-    // (3 + 3);
-    let tokens = vec![
-      Token {
-        kind: TokenType::Number,
-        span: TextSpan {
-          start: 0,
-          end: 1,
-          literal: "3".to_string(),
-          line: 0,
-        },
-      },
-      Token {
-        kind: TokenType::Plus,
-        span: TextSpan {
-          start: 2,
-          end: 3,
-          literal: "+".to_string(),
-          line: 0,
-        },
-      },
-      Token {
-        kind: TokenType::Number,
-        span: TextSpan {
-          start: 4,
-          end: 5,
-          literal: "3".to_string(),
-          line: 0,
-        },
-      },
-      Token {
-        kind: TokenType::SemiColon,
-        span: TextSpan {
-          start: 5,
-          end: 6,
-          literal: ";".to_string(),
-          line: 0,
-        },
-      },
-      Token {
-        kind: TokenType::Eof,
-        span: TextSpan {
-          start: 0,
-          end: 0,
-          literal: "\0".to_string(),
-          line: 1,
-        },
-      },
-    ];
-
-    let mut parser = Parser::new(tokens);
-
-    match parser.parse() {
-      Ok(result) => {
-        assert_eq!(result.to_string(), "(+ 3 3)");
-      }
-      Err(error) => panic!("{:?}", error),
-    };
-  }
-
-  #[test]
-  fn test_valid_expression_two() {
-    // 4 + 12 * 43;
-    let tokens = vec![
-      Token {
-        kind: TokenType::Number,
-        span: TextSpan {
-          start: 0,
-          end: 1,
-          literal: "4".to_string(),
-          line: 0,
-        },
-      },
-      Token {
-        kind: TokenType::Plus,
-        span: TextSpan {
-          start: 2,
-          end: 3,
-          literal: "+".to_string(),
-          line: 0,
-        },
-      },
-      Token {
-        kind: TokenType::Number,
-        span: TextSpan {
-          start: 4,
-          end: 6,
-          literal: "12".to_string(),
-          line: 0,
-        },
-      },
-      Token {
-        kind: TokenType::Asterisk,
-        span: TextSpan {
-          start: 7,
-          end: 8,
-          literal: "*".to_string(),
-          line: 0,
-        },
-      },
-      Token {
-        kind: TokenType::Number,
-        span: TextSpan {
-          start: 9,
-          end: 11,
-          literal: "43".to_string(),
-          line: 0,
-        },
-      },
-      Token {
-        kind: TokenType::SemiColon,
-        span: TextSpan {
-          start: 11,
-          end: 12,
-          literal: ";".to_string(),
-          line: 0,
-        },
-      },
-      Token {
-        kind: TokenType::Eof,
-        span: TextSpan {
-          start: 0,
-          end: 0,
-          literal: "\0".to_string(),
-          line: 1,
-        },
-      },
-    ];
-
-    let mut parser = Parser::new(tokens);
-
-    match parser.parse() {
-      Ok(result) => {
-        assert_eq!(result.to_string(), "(+ 4 (* 12 43))");
-      }
-      Err(error) => panic!("{:?}", error),
-    };
-  }
-
-  #[test]
-  fn test_valid_expression_error() {
-    // ( 8 +
-    let tokens = vec![
-      Token {
-        kind: TokenType::LeftParen,
-        span: TextSpan {
-          start: 0,
-          end: 1,
-          literal: "(".to_string(),
-          line: 0,
-        },
-      },
-      Token {
-        kind: TokenType::Number,
-        span: TextSpan {
-          start: 2,
-          end: 3,
-          literal: "3".to_string(),
-          line: 0,
-        },
-      },
-      Token {
-        kind: TokenType::Plus,
-        span: TextSpan {
-          start: 4,
-          end: 5,
-          literal: "+".to_string(),
-          line: 0,
-        },
-      },
-      Token {
-        kind: TokenType::Number,
-        span: TextSpan {
-          start: 6,
-          end: 7,
-          literal: "3".to_string(),
-          line: 0,
-        },
-      },
-      Token {
-        kind: TokenType::Eof,
-        span: TextSpan {
-          start: 0,
-          end: 0,
-          literal: "\0".to_string(),
-          line: 1,
-        },
-      },
-    ];
-
-    let mut parser = Parser::new(tokens);
-
-    match parser.parse() {
-      Ok(_) => (),
-      Err(error) => assert_eq!(error.message, "Expect ')' after expression."),
-    };
-  }
-
-  #[test]
-  fn test_valid_expression_null() {
-    // null
-    let tokens = vec![
-      Token {
-        kind: TokenType::Null,
-        span: TextSpan {
-          start: 0,
-          end: 4,
-          literal: "null".to_string(),
-          line: 0,
-        },
-      },
-      Token {
-        kind: TokenType::Eof,
-        span: TextSpan {
-          start: 0,
-          end: 0,
-          literal: "\0".to_string(),
-          line: 1,
-        },
-      },
-    ];
-
-    let mut parser = Parser::new(tokens);
-
-    match parser.parse() {
-      Ok(result) => assert_eq!(result.to_string(), "null"),
-      Err(error) => panic!("{:?}", error),
-    };
   }
 }

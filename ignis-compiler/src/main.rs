@@ -4,9 +4,17 @@ use std::{
   io::{self, Write, BufRead},
   env,
   process::exit,
+  fs,
 };
 
-use ast::{parser::Parser, lexer::Lexer};
+use ast::{parser::Parser, lexer::Lexer, expression, statement};
+
+fn run_file(path: &str) -> Result<(), String> {
+  match fs::read_to_string(path) {
+    Ok(content) => run(content),
+    Err(message) => Err(message.to_string()),
+  }
+}
 
 fn run(source: String) -> Result<(), String> {
   if source.trim() == String::from("exit") {
@@ -17,13 +25,25 @@ fn run(source: String) -> Result<(), String> {
   let mut lexer: Lexer<'_> = Lexer::new(&source);
   lexer.scan_tokens();
 
+  // for token in lexer.tokens {
+  //   println!("{:?}", token);
+  // }
+
   let mut parser = Parser::new(lexer.tokens);
   let expressions = parser.parse();
-  
+
   match expressions {
-      Ok(result) => println!("{:?}", result.to_string()),
-      Err(error) => println!("{:?}", error)
-  };
+    Ok(statements) => {
+      for expression in statements {
+        println!("{:?}", expression);
+      }
+    }
+    Err(errors) => {
+      for error in errors {
+        println!("{:?}", error);
+      }
+    }
+  }
 
   Ok(())
 }
@@ -59,11 +79,23 @@ fn run_prompt() -> Result<(), String> {
 }
 
 fn main() {
-  match run_prompt() {
-    Ok(_) => exit(0),
-    Err(msg) => {
-      println!("ERROR\n{}", msg);
-      exit(1);
+  let args: Vec<String> = env::args().collect();
+
+  if args.len() == 2 {
+    match run_file(&args[1]) {
+      Ok(_) => exit(0),
+      Err(msg) => {
+        println!("ERROR\n{}", msg);
+        exit(1);
+      }
+    }
+  } else {
+    match run_prompt() {
+      Ok(_) => exit(0),
+      Err(msg) => {
+        println!("ERROR\n{}", msg);
+        exit(1);
+      }
     }
   }
 }
