@@ -55,13 +55,13 @@ pub enum LiteralValue {
 impl LiteralValue {
   pub fn to_string(&self) -> String {
     match self {
-        LiteralValue::Boolean(x) => x.to_string(),
-        LiteralValue::None => "null".to_string(),
-        LiteralValue::Number(x) => x.to_string(),
-        LiteralValue::Double(x) => x.to_string(),
-        LiteralValue::Int(x) => x.to_string(),
-        LiteralValue::String(x) => x.clone(),
-        LiteralValue::Char(x) => x.to_string()
+      LiteralValue::Boolean(x) => x.to_string(),
+      LiteralValue::None => "null".to_string(),
+      LiteralValue::Number(x) => x.to_string(),
+      LiteralValue::Double(x) => x.to_string(),
+      LiteralValue::Int(x) => x.to_string(),
+      LiteralValue::String(x) => x.clone(),
+      LiteralValue::Char(x) => x.to_string(),
     }
   }
 

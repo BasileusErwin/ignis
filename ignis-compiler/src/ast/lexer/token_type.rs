@@ -40,8 +40,16 @@ pub enum TokenType {
   Number,
   Int,    // 1-10
   Double, // 1.3
-  Char,  // a-z A-Z 0-9
+  Char,   // a-z A-Z 0-9
   String,
+
+  // Types
+  NumberType,
+  StringType,
+  IntType,
+  BooleanType,
+  DoubleType,
+  CharType,
 
   // Keywords
   Class,

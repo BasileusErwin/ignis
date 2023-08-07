@@ -1,3 +1,6 @@
-function main() {
-  let helloWorld = "Hello World";
-}
+// function main() {
+  let helloWorld: string = "Hello World";
+  let num: number = 12;
+  let bool: boolean  = false;
+  let bool2: boolean  = true;
+// }

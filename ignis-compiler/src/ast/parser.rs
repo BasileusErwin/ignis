@@ -2,9 +2,12 @@ use super::{
   lexer::{token::Token, token_type::TokenType},
   expression::{
     Expression, binary::Binary, unary::Unary, literal::Literal, LiteralValue, grouping::Grouping,
-    self,
   },
-  statement::{Statement, variable::Variable, expression::ExpressionStatement, self},
+  statement::{
+    Statement,
+    variable::{Variable, StatementType},
+    expression::ExpressionStatement,
+  },
 };
 
 pub struct Parser {
@@ -184,16 +187,27 @@ impl Parser {
 
   fn declaration(&mut self) -> Result<Statement, ParserError> {
     if self.match_token(&[TokenType::Let, TokenType::Const]) {
-      return self.variableDeclaration();
+      return self.variable_declaration();
     }
 
     self.statement()
   }
 
-  fn variableDeclaration(&mut self) -> Result<Statement, ParserError> {
+  fn variable_declaration(&mut self) -> Result<Statement, ParserError> {
     let name: Token = self.consume(TokenType::Identifier, "Expect varible name.".to_string())?;
 
     let mut initializer: Option<Expression> = None;
+    let type_annotation: StatementType;
+
+    match self.consume(
+      TokenType::Colon,
+      "Type expected before assignments".to_string(),
+    ) {
+      Ok(_) => type_annotation = StatementType::from_token_type(self.peek().kind),
+      Err(error) => return Err(error),
+    }
+
+    self.advance();
 
     if self.match_token(&[TokenType::Equal]) {
       initializer = Some(self.expression()?);
@@ -208,6 +222,7 @@ impl Parser {
       Ok(Statement::Variable(Variable::new(
         Box::new(name),
         Box::new(ini),
+        Box::new(type_annotation),
       )))
     } else {
       Err(ParserError::new("Expect expression.".to_string(), name))
@@ -224,7 +239,7 @@ impl Parser {
     self.consume(
       TokenType::SemiColon,
       "Expect ';' after expression.".to_string(),
-    );
+    )?;
 
     Ok(Statement::Expression(ExpressionStatement::new(Box::new(
       expression,

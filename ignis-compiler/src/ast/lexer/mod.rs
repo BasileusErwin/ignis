@@ -206,6 +206,12 @@ impl<'a> Lexer<'a> {
       "interface" => Some(TokenType::Interface),
       "extends" => Some(TokenType::Extends),
       "implements" => Some(TokenType::Implements),
+      "string" => Some(TokenType::StringType),
+      "boolean" => Some(TokenType::BooleanType),
+      "int" => Some(TokenType::IntType),
+      "number" => Some(TokenType::NumberType),
+      "double" => Some(TokenType::DoubleType),
+      "char" => Some(TokenType::CharType),
       _ => None,
     }
   }

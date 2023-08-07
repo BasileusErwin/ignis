@@ -25,7 +25,7 @@ fn run(source: String) -> Result<(), String> {
   let mut lexer: Lexer<'_> = Lexer::new(&source);
   lexer.scan_tokens();
 
-  // for token in lexer.tokens {
+  // for token in &lexer.tokens {
   //   println!("{:?}", token);
   // }
 

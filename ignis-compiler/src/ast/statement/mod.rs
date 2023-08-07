@@ -6,8 +6,8 @@ use variable::Variable;
 
 #[derive(Debug)]
 pub enum Statement {
-	Expression(ExpressionStatement),
-	Variable(Variable)
+  Expression(ExpressionStatement),
+  Variable(Variable),
 }
 
 pub trait Visitor<R> {
