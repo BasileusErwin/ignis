@@ -4,13 +4,20 @@ pub mod variable;
 use expression::ExpressionStatement;
 use variable::Variable;
 
+use super::visitor::Visitor;
+
 #[derive(Debug)]
 pub enum Statement {
   Expression(ExpressionStatement),
   Variable(Variable),
 }
 
-pub trait Visitor<R> {
-  fn visit_expression_statement(&self, statement: &ExpressionStatement) -> R;
-  fn visit_variable_statement(&self, variable: &Variable) -> R;
+
+impl Statement {
+  pub fn accept<R>(&self, visitor: &dyn Visitor<R>) -> R {
+    match self {
+      Statement::Expression(expression) => visitor.visit_expression_statement(expression),
+      Statement::Variable(variable) => visitor.visit_variable_statement(variable),
+    }
+  }
 }

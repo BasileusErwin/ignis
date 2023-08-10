@@ -32,6 +32,7 @@ pub enum TokenType {
   And,          // &&
   Arrow,        // =>
   Increment,    // +=
+  Decrement,    // -=
 
   // Separator
   Comma,     // ,

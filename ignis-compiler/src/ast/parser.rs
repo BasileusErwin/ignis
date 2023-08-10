@@ -3,11 +3,8 @@ use super::{
   expression::{
     Expression, binary::Binary, unary::Unary, literal::Literal, LiteralValue, grouping::Grouping,
   },
-  statement::{
-    Statement,
-    variable::{Variable, StatementType},
-    expression::ExpressionStatement,
-  },
+  statement::{Statement, variable::Variable, expression::ExpressionStatement},
+  data_type::DataType,
 };
 
 pub struct Parser {
@@ -64,8 +61,14 @@ impl Parser {
     while self.match_token(&[TokenType::BangEqual, TokenType::EqualEqual]) {
       let operator: Token = self.previous();
       let right = self.comparison()?;
+      let data_type: DataType = DataType::Boolean;
 
-      expression = Expression::Binary(Binary::new(Box::new(expression), operator, Box::new(right)));
+      expression = Expression::Binary(Binary::new(
+        Box::new(expression),
+        operator,
+        Box::new(right),
+        data_type,
+      ));
     }
 
     Ok(expression)
@@ -83,8 +86,14 @@ impl Parser {
     ]) {
       let operator: Token = self.previous();
       let right = self.term()?;
+      let data_type: DataType = DataType::Boolean;
 
-      expression = Expression::Binary(Binary::new(Box::new(expression), operator, Box::new(right)));
+      expression = Expression::Binary(Binary::new(
+        Box::new(expression),
+        operator,
+        Box::new(right),
+        data_type,
+      ));
     }
 
     Ok(expression)
@@ -98,7 +107,16 @@ impl Parser {
       let operator: Token = self.previous();
       let right = self.factor()?;
 
-      expression = Expression::Binary(Binary::new(Box::new(expression), operator, Box::new(right)));
+      let left_type = self.get_expression_type(&expression);
+      let right_type = self.get_expression_type(&right);
+      let operator_kind = operator.kind.clone();
+
+      expression = Expression::Binary(Binary::new(
+        Box::new(expression),
+        operator,
+        Box::new(right),
+        self.get_data_type_by_operator(Some(left_type), right_type, operator_kind)?,
+      ));
     }
 
     Ok(expression)
@@ -112,7 +130,17 @@ impl Parser {
       let operator: Token = self.previous();
       let right = self.unary()?;
 
-      expression = Expression::Binary(Binary::new(Box::new(expression), operator, Box::new(right)));
+      let left_type = self.get_expression_type(&expression);
+      let right_type = self.get_expression_type(&right);
+
+      let operator_kind = operator.kind.clone();
+
+      expression = Expression::Binary(Binary::new(
+        Box::new(expression),
+        operator,
+        Box::new(right),
+        self.get_data_type_by_operator(Some(left_type), right_type, operator_kind)?,
+      ));
     }
 
     Ok(expression)
@@ -124,7 +152,14 @@ impl Parser {
       let operator = self.previous();
       let right = self.unary()?;
 
-      return Ok(Expression::Unary(Unary::new(operator, Box::new(right))));
+      let right_type = self.get_expression_type(&right);
+      let operator_kind = operator.kind.clone();
+
+      return Ok(Expression::Unary(Unary::new(
+        operator,
+        Box::new(right),
+        self.get_data_type_by_operator(None, right_type, operator_kind)?,
+      )));
     }
 
     self.primary()
@@ -137,7 +172,8 @@ impl Parser {
       TokenType::True
       | TokenType::False
       | TokenType::Null
-      | TokenType::Number
+      | TokenType::Int
+      | TokenType::Double
       | TokenType::String => {
         self.advance();
         Ok(Expression::Literal(Literal::new(LiteralValue::from_token(
@@ -159,6 +195,43 @@ impl Parser {
         String::from("Expect expression."),
         self.peek(),
       )),
+    }
+  }
+
+  fn get_data_type_by_operator(
+    &mut self,
+    left: Option<DataType>,
+    right: DataType,
+    operator: TokenType,
+  ) -> Result<DataType, ParserError> {
+    match (left, right, operator) {
+      (Some(DataType::Int), DataType::Int, TokenType::Plus)
+      | (Some(DataType::Int), DataType::Int, TokenType::Minus)
+      | (None, DataType::Int, TokenType::Minus) => Ok(DataType::Int),
+      (Some(DataType::Double), DataType::Double, TokenType::Plus) => Ok(DataType::Double),
+      (Some(DataType::Double), DataType::Double, TokenType::Minus)
+      | (None, DataType::Double, TokenType::Minus) => Ok(DataType::Double),
+      (Some(DataType::String), DataType::String, TokenType::Plus) => Ok(DataType::String),
+      (None, DataType::Boolean, TokenType::Bang) | (None, DataType::String, TokenType::Bad) => {
+        Ok(DataType::Boolean)
+      }
+      _ => Err(ParserError::new("Error type".to_string(), self.peek())),
+    }
+  }
+
+  fn get_expression_type(&self, expression: &Expression) -> DataType {
+    match expression {
+      Expression::Binary(binary) => binary.data_type.clone(),
+      Expression::Unary(unary) => unary.data_type.clone(),
+      Expression::Literal(literal) => match literal.value {
+        LiteralValue::Boolean(_) => DataType::Boolean,
+        LiteralValue::Char(_) => DataType::Char,
+        LiteralValue::Double(_) => DataType::Double,
+        LiteralValue::Int(_) => DataType::Int,
+        LiteralValue::String(_) => DataType::String,
+        _ => DataType::Int,
+      },
+      Expression::Grouping(grouping) => self.get_expression_type(&grouping.expression),
     }
   }
 
@@ -197,13 +270,23 @@ impl Parser {
     let name: Token = self.consume(TokenType::Identifier, "Expect varible name.".to_string())?;
 
     let mut initializer: Option<Expression> = None;
-    let type_annotation: StatementType;
+    let type_annotation: DataType;
 
     match self.consume(
       TokenType::Colon,
       "Type expected before assignments".to_string(),
     ) {
-      Ok(_) => type_annotation = StatementType::from_token_type(self.peek().kind),
+      Ok(_) => {
+        let kind = DataType::from_token_type(self.peek().kind);
+        if kind == DataType::None {
+          return Err(ParserError::new(
+            "Type expected before assignments".to_string(),
+            self.peek(),
+          ));
+        }
+
+        type_annotation = kind;
+      }
       Err(error) => return Err(error),
     }
 

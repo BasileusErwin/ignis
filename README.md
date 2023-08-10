@@ -60,3 +60,11 @@ let helloWorld = "Hello World";
 - [ ] Parser functions
 - [ ] Interpreter
 
+### 08/10/2023
+
+- [X] Lexer
+- [X] Parser expressions
+- [X] Parser statements
+- [X] Evaluator expression
+- [X] Typing
+- [ ] Parser functions

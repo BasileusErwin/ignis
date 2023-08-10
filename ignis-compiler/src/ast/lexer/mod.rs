@@ -74,7 +74,15 @@ impl<'a> Lexer<'a> {
       ',' => self.add_token(TokenType::Comma),
       '.' => self.add_token(TokenType::Dot),
       ';' => self.add_token(TokenType::SemiColon),
-      '-' => self.add_token(TokenType::Minus),
+      '-' => {
+        let token: TokenType = if self.match_char('=') {
+          TokenType::Decrement
+        } else {
+          TokenType::Minus
+        };
+
+        self.add_token(token);
+      }
       '+' => {
         let token: TokenType = if self.match_char('=') {
           TokenType::Increment
@@ -83,7 +91,7 @@ impl<'a> Lexer<'a> {
         };
 
         self.add_token(token);
-      },
+      }
       '*' => self.add_token(TokenType::Asterisk),
       ':' => self.add_token(TokenType::Colon),
       '%' => self.add_token(TokenType::Mod),
@@ -161,17 +169,21 @@ impl<'a> Lexer<'a> {
         }
       }
       '"' => {
-        if let Some(_) = self.string() {
-          self.add_token(TokenType::String);
+        if let Some(value) = self.string() {
+          self.add_token_string(value);
         }
       }
       '\n' => self.line += 1,
       ' ' | '\r' | '\t' => (),
       _ => {
         if c.is_ascii_digit() {
-          self.number();
+          let is_double = self.number();
 
-          self.add_token(TokenType::Number);
+          if is_double {
+            self.add_token(TokenType::Double);
+          } else {
+            self.add_token(TokenType::Int);
+          }
           return;
         }
 
@@ -263,7 +275,7 @@ impl<'a> Lexer<'a> {
 
     self.advance();
 
-    Some(self.source[self.start..self.current].to_string())
+    Some(self.source[self.start + 1..self.current - 1].to_string())
   }
 
   /**
@@ -291,7 +303,8 @@ impl<'a> Lexer<'a> {
     self.source.chars().nth(self.current - 1).unwrap_or('\0')
   }
 
-  fn number(&mut self) -> () {
+  fn number(&mut self) -> bool {
+    let mut is_double: bool = false;
     while self.peek().is_ascii_digit() {
       self.advance();
     }
@@ -302,7 +315,11 @@ impl<'a> Lexer<'a> {
       while self.peek().is_ascii_digit() {
         self.advance();
       }
+
+      is_double = true;
     }
+
+    is_double
   }
 
   fn peek_next(&self) -> char {
@@ -315,6 +332,13 @@ impl<'a> Lexer<'a> {
   */
   fn peek(&self) -> char {
     self.source.chars().nth(self.current).unwrap_or('\0')
+  }
+
+  fn add_token_string(&mut self, value: String) {
+    self.tokens.push(Token::new(
+      TokenType::String,
+      TextSpan::new(self.start + 1, self.current -1, self.line, value),
+    ));
   }
 
   /**

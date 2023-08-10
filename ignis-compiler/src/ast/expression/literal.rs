@@ -1,6 +1,6 @@
-use super::{Visitor, LiteralValue};
+use super::LiteralValue;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Literal {
   pub value: LiteralValue,
 }
@@ -8,9 +8,5 @@ pub struct Literal {
 impl Literal {
   pub fn new(value: LiteralValue) -> Self {
     Self { value }
-  }
-
-  pub fn accept<R>(&self, visitor: &dyn Visitor<R>) -> R {
-    visitor.visit_literal_expression(self)
   }
 }
