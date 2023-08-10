@@ -77,6 +77,8 @@ impl<'a> Lexer<'a> {
       '-' => {
         let token: TokenType = if self.match_char('=') {
           TokenType::Decrement
+        } else if self.match_char('>') {
+          TokenType::Arrow
         } else {
           TokenType::Minus
         };
@@ -107,8 +109,6 @@ impl<'a> Lexer<'a> {
       '=' => {
         let token: TokenType = if self.match_char('=') {
           TokenType::EqualEqual
-        } else if self.match_char('>') {
-          TokenType::Arrow
         } else {
           TokenType::Equal
         };
@@ -337,7 +337,7 @@ impl<'a> Lexer<'a> {
   fn add_token_string(&mut self, value: String) {
     self.tokens.push(Token::new(
       TokenType::String,
-      TextSpan::new(self.start + 1, self.current -1, self.line, value),
+      TextSpan::new(self.start + 1, self.current - 1, self.line, value),
     ));
   }
 
