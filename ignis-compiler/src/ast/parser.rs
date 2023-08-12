@@ -2,6 +2,7 @@ use super::{
   lexer::{token::Token, token_type::TokenType},
   expression::{
     Expression, binary::Binary, unary::Unary, literal::Literal, LiteralValue, grouping::Grouping,
+    logical::Logical, assign::Assign, variable::VariableExpression,
   },
   statement::{Statement, variable::Variable, expression::ExpressionStatement},
   data_type::DataType,
@@ -32,7 +33,6 @@ impl Parser {
   pub fn parse(&mut self) -> Result<Vec<Statement>, Vec<ParserError>> {
     let mut statements: Vec<Statement> = vec![];
     let mut error: Vec<ParserError> = vec![];
-
     while !self.is_at_end() {
       match self.declaration() {
         Ok(statement) => statements.push(statement),
@@ -51,7 +51,7 @@ impl Parser {
   }
 
   fn expression(&mut self) -> Result<Expression, ParserError> {
-    self.equality()
+    self.assignment()
   }
 
   // equelity -> comparison (("!=" | "==") comparison)*;
@@ -115,7 +115,7 @@ impl Parser {
         Box::new(expression),
         operator,
         Box::new(right),
-        self.get_data_type_by_operator(Some(left_type), right_type, operator_kind)?,
+        self.get_data_type_by_operator(Some(left_type), right_type, operator_kind),
       ));
     }
 
@@ -139,7 +139,7 @@ impl Parser {
         Box::new(expression),
         operator,
         Box::new(right),
-        self.get_data_type_by_operator(Some(left_type), right_type, operator_kind)?,
+        self.get_data_type_by_operator(Some(left_type), right_type, operator_kind),
       ));
     }
 
@@ -158,7 +158,7 @@ impl Parser {
       return Ok(Expression::Unary(Unary::new(
         operator,
         Box::new(right),
-        self.get_data_type_by_operator(None, right_type, operator_kind)?,
+        self.get_data_type_by_operator(None, right_type, operator_kind),
       )));
     }
 
@@ -191,10 +191,15 @@ impl Parser {
 
         Ok(Expression::Grouping(Grouping::new(Box::new(expression))))
       }
-      _ => Err(ParserError::new(
-        String::from("Expect expression."),
-        self.peek(),
-      )),
+      TokenType::Identifier => {
+        self.advance();
+        let kind = token.kind.clone();
+        return Ok(Expression::Variable(VariableExpression::new(
+          token,
+          DataType::from_token_type(kind),
+        )));
+      }
+      _ => Err(ParserError::new(String::from("Expect expression."), token)),
     }
   }
 
@@ -203,19 +208,23 @@ impl Parser {
     left: Option<DataType>,
     right: DataType,
     operator: TokenType,
-  ) -> Result<DataType, ParserError> {
+  ) -> DataType {
     match (left, right, operator) {
       (Some(DataType::Int), DataType::Int, TokenType::Plus)
       | (Some(DataType::Int), DataType::Int, TokenType::Minus)
-      | (None, DataType::Int, TokenType::Minus) => Ok(DataType::Int),
-      (Some(DataType::Double), DataType::Double, TokenType::Plus) => Ok(DataType::Double),
-      (Some(DataType::Double), DataType::Double, TokenType::Minus)
-      | (None, DataType::Double, TokenType::Minus) => Ok(DataType::Double),
-      (Some(DataType::String), DataType::String, TokenType::Plus) => Ok(DataType::String),
-      (None, DataType::Boolean, TokenType::Bang) | (None, DataType::String, TokenType::Bad) => {
-        Ok(DataType::Boolean)
+      | (None, DataType::Int, TokenType::Minus)
+      | (Some(DataType::Int), DataType::Int, TokenType::Asterisk)
+      | (Some(DataType::Int), DataType::Int, TokenType::Slash) => DataType::Int,
+      (Some(DataType::Double), DataType::Double, TokenType::Plus)
+      | (Some(DataType::Double), DataType::Double, TokenType::Minus)
+      | (Some(DataType::Double), DataType::Double, TokenType::Slash)
+      | (Some(DataType::Double), DataType::Double, TokenType::Asterisk)
+      | (None, DataType::Double, TokenType::Minus) => DataType::Double,
+      (Some(DataType::String), DataType::String, TokenType::Plus) => DataType::String,
+      (None, DataType::Boolean, TokenType::Bang) | (None, DataType::String, TokenType::Bang) => {
+        DataType::Boolean
       }
-      _ => Err(ParserError::new("Error type".to_string(), self.peek())),
+      _ => DataType::Pending,
     }
   }
 
@@ -232,6 +241,9 @@ impl Parser {
         _ => DataType::Int,
       },
       Expression::Grouping(grouping) => self.get_expression_type(&grouping.expression),
+      Expression::Variable(variable) => DataType::Variable(variable.name.span.literal.clone()),
+      Expression::Assign(assign) => assign.data_type.clone(),
+      Expression::Logical(logical) => logical.data_type.clone(),
     }
   }
 
@@ -304,7 +316,7 @@ impl Parser {
     if let Some(ini) = initializer {
       Ok(Statement::Variable(Variable::new(
         Box::new(name),
-        Box::new(ini),
+        Some(Box::new(ini)),
         Box::new(type_annotation),
       )))
     } else {
@@ -312,10 +324,12 @@ impl Parser {
     }
   }
 
+  // statement -> expressionStatement;
   fn statement(&mut self) -> Result<Statement, ParserError> {
     self.expression_statement()
   }
 
+  // expressionStatement -> expression ";";
   fn expression_statement(&mut self) -> Result<Statement, ParserError> {
     let expression = self.expression()?;
 
@@ -329,11 +343,82 @@ impl Parser {
     ))))
   }
 
+  fn assignment(&mut self) -> Result<Expression, ParserError> {
+    let expression = self.or_expression()?;
+
+    if self.match_token(&[TokenType::Equal]) {
+      let equals: Token = self.previous();
+      let value = self.assignment()?;
+
+      let expression_type = self.get_expression_type(&expression);
+      let value_type = self.get_expression_type(&value);
+
+      if expression_type != value_type {
+        return Err(ParserError::new(
+          format!(
+            "Cannot assign {} to {}",
+            value_type.to_string(),
+            expression_type.to_string()
+          ),
+          equals,
+        ));
+      }
+
+      if let Expression::Variable(variable) = expression {
+        return Ok(Expression::Assign(Assign::new(
+          variable.name,
+          Box::new(value),
+          variable.data_type,
+        )));
+      }
+
+      return Err(ParserError::new(
+        "Invalid assignment target.".to_string(),
+        equals,
+      ));
+    }
+
+    return Ok(expression);
+  }
+
+  fn or_expression(&mut self) -> Result<Expression, ParserError> {
+    let mut expression = self.and_expression()?;
+
+    while self.match_token(&[TokenType::Or]) {
+      let operator: Token = self.previous();
+      let right = self.and_expression()?;
+
+      expression = Expression::Logical(Logical::new(
+        Box::new(expression),
+        operator,
+        Box::new(right),
+      ));
+    }
+
+    Ok(expression)
+  }
+
+  fn and_expression(&mut self) -> Result<Expression, ParserError> {
+    let mut expression = self.equality()?;
+
+    while self.match_token(&[TokenType::And]) {
+      let operator: Token = self.previous();
+      let right = self.equality()?;
+
+      expression = Expression::Logical(Logical::new(
+        Box::new(expression),
+        operator,
+        Box::new(right),
+      ));
+    }
+
+    Ok(expression)
+  }
+
   fn consume(&mut self, kind: TokenType, message: String) -> Result<Token, ParserError> {
     let token: Token = self.peek();
     if token.kind == kind {
-      self.advance();
-      return Ok(token);
+      return Ok(self.advance());
     }
 
     Err(ParserError::new(message, token))

@@ -7,16 +7,26 @@ use std::{
   fs,
 };
 
-use ast::{parser::Parser, lexer::Lexer, expression, statement::{self, Statement}, evaluator::Evaluator, visitor::Visitor, Ast};
+use ast::{
+  parser::Parser,
+  lexer::Lexer,
+  expression,
+  statement::{self, Statement},
+  evaluator::{Evaluator, self},
+  visitor::Visitor,
+  Ast,
+};
 
 fn run_file(path: &str) -> Result<(), String> {
+  let mut evaluator = Evaluator::new();
+
   match fs::read_to_string(path) {
-    Ok(content) => run(content),
+    Ok(content) => run(content, &mut evaluator),
     Err(message) => Err(message.to_string()),
   }
 }
 
-fn run(source: String) -> Result<(), String> {
+fn run(source: String, evaluator: &mut Evaluator) -> Result<(), String> {
   if source.trim() == String::from("exit") {
     println!("Bye!");
     exit(0);
@@ -32,14 +42,13 @@ fn run(source: String) -> Result<(), String> {
   let mut parser = Parser::new(lexer.tokens);
   let expressions = parser.parse();
   let mut ast = Ast::new();
-  let mut evaluator = Evaluator::new();
 
   match expressions {
     Ok(statements) => {
       for statement in statements {
         ast.add(statement);
       }
-      ast.visit(&mut evaluator);
+      ast.visit(evaluator);
     }
     Err(errors) => {
       for error in errors {
@@ -52,6 +61,8 @@ fn run(source: String) -> Result<(), String> {
 }
 
 fn run_prompt() -> Result<(), String> {
+  let mut evaluator = Evaluator::new();
+
   loop {
     print!("(ignis) > ");
 
@@ -74,7 +85,7 @@ fn run_prompt() -> Result<(), String> {
       Err(_) => return Err("Clound not read line".to_string()),
     }
 
-    match run(buffer) {
+    match run(buffer, &mut evaluator) {
       Ok(_) => (),
       Err(message) => println!("{}", message),
     }

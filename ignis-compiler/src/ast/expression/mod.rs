@@ -1,11 +1,20 @@
-use self::{binary::Binary, grouping::Grouping, literal::Literal, unary::Unary};
+use self::{
+  binary::Binary, grouping::Grouping, literal::Literal, unary::Unary, variable::VariableExpression,
+  logical::Logical, assign::Assign,
+};
 
-use super::{lexer::{token_type::TokenType, token::Token}, visitor::Visitor};
+use super::{
+  lexer::{token_type::TokenType, token::Token},
+  visitor::Visitor,
+};
 
+pub mod assign;
 pub mod binary;
 pub mod grouping;
 pub mod literal;
+pub mod logical;
 pub mod unary;
+pub mod variable;
 
 #[derive(Debug, PartialEq)]
 pub enum Expression {
@@ -13,6 +22,9 @@ pub enum Expression {
   Grouping(Grouping),
   Literal(Literal),
   Unary(Unary),
+  Variable(VariableExpression),
+  Assign(Assign),
+  Logical(Logical),
 }
 
 impl Expression {
@@ -21,7 +33,10 @@ impl Expression {
       Expression::Grouping(grouping) => visitor.visit_grouping_expression(grouping),
       Expression::Binary(binary) => visitor.visit_binary_expression(binary),
       Expression::Literal(literal) => visitor.visit_literal_expression(literal),
-      Expression::Unary(unary) => visitor.visit_unary_expression(unary), 
+      Expression::Unary(unary) => visitor.visit_unary_expression(unary),
+      Expression::Variable(variable) => visitor.visit_variable_expressin(variable),
+      Expression::Assign(assign) => visitor.visit_assign_expression(assign),
+      Expression::Logical(logical) => visitor.visit_logical_expression(logical),
     }
   }
 
@@ -43,11 +58,35 @@ impl Expression {
         format!("(group {})", (*expression).to_string())
       }
       Expression::Literal(Literal { value }) => format!("{}", value.to_string()),
-      Expression::Unary(Unary { operator, right , data_type}) => {
+      Expression::Unary(Unary {
+        operator,
+        right,
+        data_type,
+      }) => {
         let operator_str = operator.span.literal.clone();
         let right_str = (*right).to_string();
-        format!("({} {}): {}", operator_str, right_str, data_type.to_string())
+        format!(
+          "({} {}): {}",
+          operator_str,
+          right_str,
+          data_type.to_string()
+        )
       }
+      Expression::Variable(VariableExpression { name , data_type}) => format!("{:?}: {:?}", name, data_type),
+      Expression::Assign(Assign { name, value, .. }) => {
+        format!("{} = {}", name.span.literal, value.to_string())
+      }
+      Expression::Logical(Logical {
+        left,
+        operator,
+        right,
+        ..
+      }) => format!(
+        "({} {} {})",
+        left.to_string(),
+        operator.span.literal,
+        right.to_string()
+      ),
     }
   }
 }

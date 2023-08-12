@@ -85,6 +85,7 @@ pub enum TokenType {
   Extends,
   Implements,
   Interface,
+  Print,
 
   Bad,
   Identifier,

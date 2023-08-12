@@ -236,6 +236,7 @@ impl<'a> Lexer<'a> {
       "number" => Some(TokenType::NumberType),
       "double" => Some(TokenType::DoubleType),
       "char" => Some(TokenType::CharType),
+      "print" => Some(TokenType::Print),
       _ => None,
     }
   }

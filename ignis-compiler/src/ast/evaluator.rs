@@ -1,15 +1,17 @@
-use std::f32::consts::E;
+use std::{rc::Rc, cell::RefCell};
 
 use super::{
   visitor::Visitor,
   expression::{
     Expression, binary::Binary, literal::Literal, LiteralValue, grouping::Grouping, unary::Unary,
+    variable::VariableExpression, assign::Assign,
   },
   lexer::token_type::TokenType,
-  statement::{expression::ExpressionStatement, variable::Variable},
+  statement::{expression::ExpressionStatement, variable::Variable, Statement},
+  environment::Environment,
 };
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum EvaluatorValue {
   String(String),
   Int(i64),
@@ -18,7 +20,9 @@ pub enum EvaluatorValue {
   None,
 }
 
-pub struct Evaluator;
+pub struct Evaluator {
+  environment: Rc<RefCell<Environment>>,
+}
 
 impl Visitor<EvaluatorValue> for Evaluator {
   fn visit_binary_expression(&self, expression: &Binary) -> EvaluatorValue {
@@ -77,7 +81,7 @@ impl Visitor<EvaluatorValue> for Evaluator {
   }
 
   fn visit_grouping_expression(&self, expression: &Grouping) -> EvaluatorValue {
-		self.evaluator(&expression.expression)
+    self.evaluator(&expression.expression)
   }
 
   fn visit_literal_expression(&self, expression: &Literal) -> EvaluatorValue {
@@ -94,13 +98,13 @@ impl Visitor<EvaluatorValue> for Evaluator {
     let right = self.evaluator(&expression.right);
 
     match expression.operator.kind {
-      TokenType::Bang => EvaluatorValue::Boolean(!self.is_truthy(right)),
-			TokenType::Minus => match right {
-				EvaluatorValue::Double(r) => EvaluatorValue::Double(-r),
-				EvaluatorValue::Int(r) => EvaluatorValue::Int(-r),
-				_ => EvaluatorValue::Boolean(false), // TODO: Error
-			}
-			_ => panic!("adssadad"), // TODO: Error
+      TokenType::Bang => EvaluatorValue::Boolean(!self.is_truthy(&right)),
+      TokenType::Minus => match right {
+        EvaluatorValue::Double(r) => EvaluatorValue::Double(-r),
+        EvaluatorValue::Int(r) => EvaluatorValue::Int(-r),
+        _ => EvaluatorValue::Boolean(false), // TODO: Error
+      },
+      _ => panic!("adssadad"), // TODO: Error
     }
   }
 
@@ -109,17 +113,84 @@ impl Visitor<EvaluatorValue> for Evaluator {
   }
 
   fn visit_variable_statement(&self, variable: &Variable) -> EvaluatorValue {
-    todo!()
+    let mut value: Option<EvaluatorValue> = None;
+
+    if let Some(initializer) = &variable.initializer {
+      value = Some(self.evaluator(initializer));
+    }
+
+    self
+      .environment
+      .borrow_mut()
+      .define(variable.name.span.literal.clone(), value.unwrap());
+
+    EvaluatorValue::None
+  }
+
+  fn visit_variable_expressin(&self, variable: &VariableExpression) -> EvaluatorValue {
+    let environment = self.environment.borrow_mut();
+
+    match environment.get(variable.name.clone()) {
+      Ok(env) => {
+        if let Some(e) = env {
+          e.clone()
+        } else {
+          EvaluatorValue::None
+        }
+      }
+      Err(e) => {
+        println!("{:?}", e);
+        EvaluatorValue::None
+      }
+    }
+  }
+
+  fn visit_assign_expression(&self, expression: &Assign) -> EvaluatorValue {
+    let value = self.evaluator(&expression.value);
+    let mut environment = self.environment.borrow_mut();
+
+    match environment.assign(expression.name.clone(), value.clone()) {
+      Ok(_) => value,
+      Err(e) => {
+        println!("{:?}", e);
+        EvaluatorValue::None
+      }
+    }
+  }
+
+  fn visit_logical_expression(
+    &self,
+    expression: &super::expression::logical::Logical,
+  ) -> EvaluatorValue {
+    let left = self.evaluator(&expression.left);
+
+    if expression.operator.kind == TokenType::Or {
+      if self.is_truthy(&left) {
+        return left;
+      }
+    } else {
+      if !self.is_truthy(&left) {
+        return left;
+      }
+    }
+
+    self.evaluator(&expression.right)
   }
 }
 
 impl Evaluator {
   pub fn new() -> Self {
-    Self {}
+    Self {
+      environment: Rc::new(RefCell::new(Environment::new(None))),
+    }
   }
-
+  
   pub fn evaluator(&self, expression: &Expression) -> EvaluatorValue {
     expression.accept(self)
+  }
+
+  pub fn execute(&mut self, statement: Statement) {
+    statement.accept(self);
   }
 
   fn is_equal(&self, left: EvaluatorValue, right: EvaluatorValue) -> bool {
@@ -133,11 +204,12 @@ impl Evaluator {
     }
   }
 
-  fn is_truthy(&self, value: EvaluatorValue) -> bool {
+  fn is_truthy(&self, value: &EvaluatorValue) -> bool {
     match value {
-      EvaluatorValue::Boolean(v) => v,
+      EvaluatorValue::Boolean(v) => v.clone(),
+      EvaluatorValue::String(v) => !v.is_empty(),
       EvaluatorValue::None => false,
-      EvaluatorValue::String(_) | EvaluatorValue::Int(_) | EvaluatorValue::Double(_) => true,
+      EvaluatorValue::Int(_) | EvaluatorValue::Double(_) => true,
     }
   }
 }

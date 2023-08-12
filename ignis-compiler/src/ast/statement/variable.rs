@@ -2,15 +2,15 @@ use crate::ast::{expression::Expression, lexer::token::Token, data_type::DataTyp
 
 #[derive(Debug)]
 pub struct Variable {
-  name: Box<Token>,
-  initializer: Box<Expression>,
-  type_annotation: Box<DataType>,
+  pub name: Box<Token>,
+  pub initializer: Option<Box<Expression>>,
+  pub type_annotation: Box<DataType>,
 }
 
 impl Variable {
   pub fn new(
     name: Box<Token>,
-    initializer: Box<Expression>,
+    initializer: Option<Box<Expression>>,
     type_annotation: Box<DataType>,
   ) -> Self {
     Self {

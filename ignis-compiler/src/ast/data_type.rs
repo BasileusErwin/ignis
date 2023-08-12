@@ -8,8 +8,10 @@ pub enum DataType {
   Boolean,
   Char,
   None,
+  Pending,
   // TODO: Type non-primitive
-	Array(Vec<DataType>),
+  Variable(String),
+  Array(Vec<DataType>),
   ClassType(String),
   GenericType {
     base: Box<DataType>,
@@ -41,7 +43,9 @@ impl DataType {
       DataType::Double => "Double".to_string(),
       DataType::Boolean => "Boolean".to_string(),
       DataType::Char => "Char".to_string(),
-      DataType::None => "None".to_string(),
+      DataType::None => "Null".to_string(),
+      DataType::Pending => "Pending".to_string(),
+      DataType::Variable(name) => name.to_string(),
       DataType::ClassType(name) => name.clone(),
       DataType::GenericType { base, parameters } => {
         let params: Vec<String> = parameters.iter().map(|p| p.to_string()).collect();
@@ -50,7 +54,6 @@ impl DataType {
       DataType::UnionType(types) => {
         let type_strings: Vec<String> = types.iter().map(|t| t.to_string()).collect();
         format!("Union<{}>", type_strings.join(" | "))
-
       }
       DataType::Array(types) => {
         let type_strings: Vec<String> = types.iter().map(|t| t.to_string()).collect();
