@@ -30,11 +30,17 @@ impl Ast {
     self.statementes.push(statement);
   }
 
-  pub fn visit(&mut self, visitor: &mut dyn Visitor<EvaluatorValue>) {
+  pub fn visit(&mut self, visitor: &mut dyn Visitor<Result<EvaluatorValue, ()>>) {
     for statement in &self.statementes {
       match statement {
         Statement::Expression(expression) => {
-          let value = visitor.visit_expression_statement(expression);
+          let value;
+
+          match visitor.visit_expression_statement(expression) {
+            Ok(e) => value = e,
+            Err(_) => return,
+          };
+
           match value {
             EvaluatorValue::Int(v) => println!("{}", v),
             EvaluatorValue::Double(v) => println!("{}", v),
@@ -44,7 +50,13 @@ impl Ast {
           }
         }
         Statement::Variable(variable) => {
-          let value = visitor.visit_variable_statement(variable);
+          let value;
+
+          match visitor.visit_variable_statement(variable) {
+            Ok(v) => value = v,
+            Err(_) => return,
+          };
+
           match value {
             EvaluatorValue::Int(v) => println!("{}", v),
             EvaluatorValue::Double(v) => println!("{}", v),

@@ -1,4 +1,7 @@
-use crate::ast::{lexer::token::Token, data_type::{DataType, self}};
+use crate::ast::{
+  lexer::token::Token,
+  data_type::{DataType, self},
+};
 
 #[derive(Debug, PartialEq)]
 pub struct VariableExpression {

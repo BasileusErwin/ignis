@@ -63,93 +63,106 @@ impl<'a> Lexer<'a> {
 
   fn scan_token(&mut self) {
     let c: char = self.advance();
+    let mut token: TokenType = TokenType::Bad;
+
+    if c.is_whitespace() {
+      return;
+    }
 
     match c {
-      '(' => self.add_token(TokenType::LeftParen),
-      ')' => self.add_token(TokenType::RightParen),
-      '{' => self.add_token(TokenType::LeftBrace),
-      '}' => self.add_token(TokenType::RightBrace),
-      '[' => self.add_token(TokenType::LeftBrack),
-      ']' => self.add_token(TokenType::RightBrack),
-      ',' => self.add_token(TokenType::Comma),
-      '.' => self.add_token(TokenType::Dot),
-      ';' => self.add_token(TokenType::SemiColon),
+      '(' => {
+        token = TokenType::LeftParen;
+      }
+      ')' => {
+        token = TokenType::RightParen;
+      }
+      '{' => {
+        token = TokenType::LeftBrace;
+      }
+      '}' => {
+        token = TokenType::RightBrace;
+      }
+      '[' => {
+        token = TokenType::LeftBrack;
+      }
+      ']' => {
+        token = TokenType::RightBrack;
+      }
+      ',' => {
+        token = TokenType::Comma;
+      }
+      '.' => {
+        token = TokenType::Dot;
+      }
+      ';' => {
+        token = TokenType::SemiColon;
+      }
       '-' => {
-        let token: TokenType = if self.match_char('=') {
+        token = if self.match_char('=') {
           TokenType::Decrement
         } else if self.match_char('>') {
           TokenType::Arrow
         } else {
           TokenType::Minus
         };
-
-        self.add_token(token);
       }
       '+' => {
-        let token: TokenType = if self.match_char('=') {
+        token = if self.match_char('=') {
           TokenType::Increment
         } else {
           TokenType::Plus
         };
-
-        self.add_token(token);
       }
-      '*' => self.add_token(TokenType::Asterisk),
-      ':' => self.add_token(TokenType::Colon),
-      '%' => self.add_token(TokenType::Mod),
+      '*' => {
+        token = TokenType::Asterisk;
+      }
+      ':' => {
+        token = TokenType::Colon;
+      }
+      '%' => {
+        token = TokenType::Mod;
+      }
       '!' => {
-        let token: TokenType = if self.match_char('=') {
+        token = if self.match_char('=') {
           TokenType::BangEqual
         } else {
           TokenType::Bang
         };
-
-        self.add_token(token)
       }
       '=' => {
-        let token: TokenType = if self.match_char('=') {
+        token = if self.match_char('=') {
           TokenType::EqualEqual
         } else {
           TokenType::Equal
         };
-
-        self.add_token(token)
       }
       '<' => {
-        let token: TokenType = if self.match_char('=') {
+        token = if self.match_char('=') {
           TokenType::LessEqual
         } else {
           TokenType::Less
         };
-
-        self.add_token(token)
       }
       '>' => {
-        let token: TokenType = if self.match_char('=') {
+        token = if self.match_char('=') {
           TokenType::GreaterEqual
         } else {
           TokenType::Greater
         };
-
-        self.add_token(token)
       }
       '|' => {
-        let token = if self.match_char('|') {
+        token = if self.match_char('|') {
           TokenType::Or
         } else {
           TokenType::Pipe
         };
-
-        self.add_token(token);
       }
       '&' => {
-        let token = if self.match_char('&') {
+        token = if self.match_char('&') {
           TokenType::And
         } else {
           TokenType::Ampersand
         };
-
-        self.add_token(token)
       }
       '/' => {
         if self.match_char('*') {
@@ -165,37 +178,36 @@ impl<'a> Lexer<'a> {
             self.advance();
           }
         } else {
-          self.add_token(TokenType::Slash)
+          token = TokenType::Slash;
         }
       }
       '"' => {
         if let Some(value) = self.string() {
           self.add_token_string(value);
+          return;
         }
       }
-      '\n' => self.line += 1,
+      '\n' => {
+        self.line += 1;
+        return;
+      }
       ' ' | '\r' | '\t' => (),
       _ => {
         if c.is_ascii_digit() {
-          let is_double = self.number();
-
-          if is_double {
-            self.add_token(TokenType::Double);
+          if self.number() {
+            token = TokenType::Double;
           } else {
-            self.add_token(TokenType::Int);
+            token = TokenType::Int;
           }
-          return;
         }
 
         if self.is_identifier_starter() {
-          let kind: TokenType = self.identifier();
-          self.add_token(kind);
-          return;
+          token = self.identifier();
         }
-
-        self.add_token(TokenType::Bad)
       }
     }
+
+    self.add_token(token);
   }
 
   fn get_keyword(key: &str) -> Option<TokenType> {
@@ -233,10 +245,8 @@ impl<'a> Lexer<'a> {
       "string" => Some(TokenType::StringType),
       "boolean" => Some(TokenType::BooleanType),
       "int" => Some(TokenType::IntType),
-      "number" => Some(TokenType::NumberType),
       "double" => Some(TokenType::DoubleType),
       "char" => Some(TokenType::CharType),
-      "print" => Some(TokenType::Print),
       _ => None,
     }
   }
@@ -270,7 +280,6 @@ impl<'a> Lexer<'a> {
     }
 
     if self.is_at_end() {
-      // TODO: Error
       return None;
     }
 
@@ -362,20 +371,22 @@ mod tests {
 
   #[test]
   fn test_valid_indentifiers() {
-    let source: &str = "let helloWorld = \"Hello World\";";
+    let source: &str = "let helloWorld: string = \"Hello World\";";
     let mut lexer: Lexer<'_> = Lexer::new(source);
     lexer.scan_tokens();
 
-    assert_eq!(lexer.tokens.len(), 6);
+    assert_eq!(lexer.tokens.len(), 8);
     assert_eq!(lexer.tokens[0].kind, TokenType::Let);
     assert_eq!(lexer.tokens[1].kind, TokenType::Identifier);
-    assert_eq!(lexer.tokens[2].kind, TokenType::Equal);
+    assert_eq!(lexer.tokens[2].kind, TokenType::Colon);
+    assert_eq!(lexer.tokens[3].kind, TokenType::StringType);
+    assert_eq!(lexer.tokens[4].kind, TokenType::Equal);
 
-    assert_eq!(lexer.tokens[3].kind, TokenType::String);
-    assert_eq!(lexer.tokens[3].span.literal, "\"Hello World\"".to_string());
+    assert_eq!(lexer.tokens[5].kind, TokenType::String);
+    assert_eq!(lexer.tokens[5].span.literal, "Hello World".to_string());
 
-    assert_eq!(lexer.tokens[4].kind, TokenType::SemiColon);
-    assert_eq!(lexer.tokens[5].kind, TokenType::Eof);
+    assert_eq!(lexer.tokens[6].kind, TokenType::SemiColon);
+    assert_eq!(lexer.tokens[7].kind, TokenType::Eof);
   }
 
   #[test]
@@ -386,18 +397,18 @@ mod tests {
 
     assert_eq!(lexer.tokens.len(), 9);
     assert_eq!(lexer.tokens[0].kind, TokenType::LeftParen);
-    assert_eq!(lexer.tokens[1].kind, TokenType::Number);
+    assert_eq!(lexer.tokens[1].kind, TokenType::Int);
     assert_eq!(lexer.tokens[1].span.literal, "3".to_string());
 
     assert_eq!(lexer.tokens[2].kind, TokenType::Plus);
 
-    assert_eq!(lexer.tokens[3].kind, TokenType::Number);
+    assert_eq!(lexer.tokens[3].kind, TokenType::Int);
     assert_eq!(lexer.tokens[3].span.literal, "5".to_string());
 
     assert_eq!(lexer.tokens[4].kind, TokenType::RightParen);
     assert_eq!(lexer.tokens[5].kind, TokenType::Asterisk);
 
-    assert_eq!(lexer.tokens[6].kind, TokenType::Number);
+    assert_eq!(lexer.tokens[6].kind, TokenType::Int);
     assert_eq!(lexer.tokens[6].span.literal, "12".to_string());
 
     assert_eq!(lexer.tokens[7].kind, TokenType::SemiColon);

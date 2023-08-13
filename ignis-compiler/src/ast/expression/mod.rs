@@ -72,7 +72,9 @@ impl Expression {
           data_type.to_string()
         )
       }
-      Expression::Variable(VariableExpression { name , data_type}) => format!("{:?}: {:?}", name, data_type),
+      Expression::Variable(VariableExpression { name, data_type }) => {
+        format!("{:?}: {:?}", name, data_type)
+      }
       Expression::Assign(Assign { name, value, .. }) => {
         format!("{} = {}", name.span.literal, value.to_string())
       }

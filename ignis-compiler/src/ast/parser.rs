@@ -1,3 +1,5 @@
+use crate::diagnostic::{DiagnosticList, Diagnostic};
+
 use super::{
   lexer::{token::Token, token_type::TokenType},
   expression::{
@@ -11,51 +13,42 @@ use super::{
 pub struct Parser {
   pub tokens: Vec<Token>,
   current: usize,
-}
-
-#[derive(Debug)]
-pub struct ParserError {
-  pub message: String,
-  pub token: Token,
-}
-
-impl ParserError {
-  pub fn new(message: String, token: Token) -> Self {
-    Self { message, token }
-  }
+  pub diagnostics: DiagnosticList,
 }
 
 impl Parser {
   pub fn new(tokens: Vec<Token>) -> Self {
-    Self { tokens, current: 0 }
+    Self {
+      tokens,
+      current: 0,
+      diagnostics: DiagnosticList::new(),
+    }
   }
 
-  pub fn parse(&mut self) -> Result<Vec<Statement>, Vec<ParserError>> {
+  pub fn parse(&mut self) -> Result<Vec<Statement>, ()> {
     let mut statements: Vec<Statement> = vec![];
-    let mut error: Vec<ParserError> = vec![];
     while !self.is_at_end() {
       match self.declaration() {
         Ok(statement) => statements.push(statement),
-        Err(err) => {
-          error.push(err);
+        Err(_) => {
           self.synchronize();
         }
       }
     }
 
-    if error.len() == 0 {
-      Ok(statements)
+    if self.diagnostics.diagnostics.len() > 0 {
+      Err(())
     } else {
-      Err(error)
+      Ok(statements)
     }
   }
 
-  fn expression(&mut self) -> Result<Expression, ParserError> {
+  fn expression(&mut self) -> Result<Expression, ()> {
     self.assignment()
   }
 
   // equelity -> comparison (("!=" | "==") comparison)*;
-  fn equality(&mut self) -> Result<Expression, ParserError> {
+  fn equality(&mut self) -> Result<Expression, ()> {
     let mut expression = self.comparison()?;
 
     while self.match_token(&[TokenType::BangEqual, TokenType::EqualEqual]) {
@@ -75,7 +68,7 @@ impl Parser {
   }
 
   // comparison -> term ((">" | ">=" | "<" | "<=") term)*;
-  fn comparison(&mut self) -> Result<Expression, ParserError> {
+  fn comparison(&mut self) -> Result<Expression, ()> {
     let mut expression = self.term()?;
 
     while self.match_token(&[
@@ -100,7 +93,7 @@ impl Parser {
   }
 
   // term -> factor (("-" | "+") factor)*;
-  fn term(&mut self) -> Result<Expression, ParserError> {
+  fn term(&mut self) -> Result<Expression, ()> {
     let mut expression = self.factor()?;
 
     while self.match_token(&[TokenType::Minus, TokenType::Plus]) {
@@ -123,7 +116,7 @@ impl Parser {
   }
 
   // factor -> ("!" | "-") unary | primary;
-  fn factor(&mut self) -> Result<Expression, ParserError> {
+  fn factor(&mut self) -> Result<Expression, ()> {
     let mut expression = self.unary()?;
 
     while self.match_token(&[TokenType::Slash, TokenType::Asterisk]) {
@@ -147,7 +140,7 @@ impl Parser {
   }
 
   // unary -> ("!" | "-") unary | primary;
-  fn unary(&mut self) -> Result<Expression, ParserError> {
+  fn unary(&mut self) -> Result<Expression, ()> {
     if self.match_token(&[TokenType::Bang, TokenType::Minus]) {
       let operator = self.previous();
       let right = self.unary()?;
@@ -165,7 +158,7 @@ impl Parser {
     self.primary()
   }
 
-  fn primary(&mut self) -> Result<Expression, ParserError> {
+  fn primary(&mut self) -> Result<Expression, ()> {
     let token = self.peek();
 
     match token.kind {
@@ -184,10 +177,7 @@ impl Parser {
         self.advance();
         let expression = self.expression()?;
 
-        self.consume(
-          TokenType::RightParen,
-          String::from("Expect ')' after expression."),
-        )?;
+        self.consume(TokenType::RightParen)?;
 
         Ok(Expression::Grouping(Grouping::new(Box::new(expression))))
       }
@@ -199,7 +189,10 @@ impl Parser {
           DataType::from_token_type(kind),
         )));
       }
-      _ => Err(ParserError::new(String::from("Expect expression."), token)),
+      _ => {
+        self.diagnostics.report_expected_expression(&token);
+        return Err(());
+      }
     }
   }
 
@@ -270,7 +263,7 @@ impl Parser {
     }
   }
 
-  fn declaration(&mut self) -> Result<Statement, ParserError> {
+  fn declaration(&mut self) -> Result<Statement, ()> {
     if self.match_token(&[TokenType::Let, TokenType::Const]) {
       return self.variable_declaration();
     }
@@ -278,23 +271,27 @@ impl Parser {
     self.statement()
   }
 
-  fn variable_declaration(&mut self) -> Result<Statement, ParserError> {
-    let name: Token = self.consume(TokenType::Identifier, "Expect varible name.".to_string())?;
+  fn variable_declaration(&mut self) -> Result<Statement, ()> {
+    let mut mutable = false;
+    if self.peek().kind == TokenType::Mut {
+      self.advance();
+      mutable = true;
+    }
+
+    let name: Token = self.consume(TokenType::Identifier)?;
 
     let mut initializer: Option<Expression> = None;
     let type_annotation: DataType;
 
-    match self.consume(
-      TokenType::Colon,
-      "Type expected before assignments".to_string(),
-    ) {
+    match self.consume(TokenType::Colon) {
       Ok(_) => {
-        let kind = DataType::from_token_type(self.peek().kind);
+        let token = self.peek();
+
+        let kind = DataType::from_token_type(token.kind.clone());
+
         if kind == DataType::None {
-          return Err(ParserError::new(
-            "Type expected before assignments".to_string(),
-            self.peek(),
-          ));
+          self.diagnostics.report_expected_type_after_variable(&token);
+          return Err(());
         }
 
         type_annotation = kind;
@@ -308,61 +305,56 @@ impl Parser {
       initializer = Some(self.expression()?);
     }
 
-    self.consume(
-      TokenType::SemiColon,
-      "Expect ';' after variable declaration".to_string(),
-    )?;
+    match self.consume(TokenType::SemiColon) {
+      Ok(_) => (),
+      Err(_) => {
+        let token = self.peek();
+
+        self
+          .diagnostics
+          .report_unexpected_token(&TokenType::SemiColon, &token);
+
+        return Err(());
+      }
+    };
 
     if let Some(ini) = initializer {
       Ok(Statement::Variable(Variable::new(
         Box::new(name),
         Some(Box::new(ini)),
         Box::new(type_annotation),
+        mutable,
       )))
     } else {
-      Err(ParserError::new("Expect expression.".to_string(), name))
+      let token = self.peek();
+      self.diagnostics.report_expected_expression(&token);
+
+      return Err(());
     }
   }
 
   // statement -> expressionStatement;
-  fn statement(&mut self) -> Result<Statement, ParserError> {
+  fn statement(&mut self) -> Result<Statement, ()> {
     self.expression_statement()
   }
 
   // expressionStatement -> expression ";";
-  fn expression_statement(&mut self) -> Result<Statement, ParserError> {
+  fn expression_statement(&mut self) -> Result<Statement, ()> {
     let expression = self.expression()?;
 
-    self.consume(
-      TokenType::SemiColon,
-      "Expect ';' after expression.".to_string(),
-    )?;
+    self.consume(TokenType::SemiColon)?;
 
     Ok(Statement::Expression(ExpressionStatement::new(Box::new(
       expression,
     ))))
   }
 
-  fn assignment(&mut self) -> Result<Expression, ParserError> {
+  fn assignment(&mut self) -> Result<Expression, ()> {
     let expression = self.or_expression()?;
 
     if self.match_token(&[TokenType::Equal]) {
       let equals: Token = self.previous();
       let value = self.assignment()?;
-
-      let expression_type = self.get_expression_type(&expression);
-      let value_type = self.get_expression_type(&value);
-
-      if expression_type != value_type {
-        return Err(ParserError::new(
-          format!(
-            "Cannot assign {} to {}",
-            value_type.to_string(),
-            expression_type.to_string()
-          ),
-          equals,
-        ));
-      }
 
       if let Expression::Variable(variable) = expression {
         return Ok(Expression::Assign(Assign::new(
@@ -372,16 +364,16 @@ impl Parser {
         )));
       }
 
-      return Err(ParserError::new(
-        "Invalid assignment target.".to_string(),
-        equals,
-      ));
+      self
+        .diagnostics
+        .report_invalid_assignment_target(&equals.span);
+      return Err(());
     }
 
     return Ok(expression);
   }
 
-  fn or_expression(&mut self) -> Result<Expression, ParserError> {
+  fn or_expression(&mut self) -> Result<Expression, ()> {
     let mut expression = self.and_expression()?;
 
     while self.match_token(&[TokenType::Or]) {
@@ -398,7 +390,7 @@ impl Parser {
     Ok(expression)
   }
 
-  fn and_expression(&mut self) -> Result<Expression, ParserError> {
+  fn and_expression(&mut self) -> Result<Expression, ()> {
     let mut expression = self.equality()?;
 
     while self.match_token(&[TokenType::And]) {
@@ -415,13 +407,27 @@ impl Parser {
     Ok(expression)
   }
 
-  fn consume(&mut self, kind: TokenType, message: String) -> Result<Token, ParserError> {
+  fn consume(&mut self, kind: TokenType) -> Result<Token, ()> {
     let token: Token = self.peek();
     if token.kind == kind {
       return Ok(self.advance());
     }
 
-    Err(ParserError::new(message, token))
+    match kind {
+      TokenType::SemiColon => {
+        self
+          .diagnostics
+          .report_unexpected_token(&TokenType::SemiColon, &token);
+      }
+      TokenType::Identifier => {
+        self.diagnostics.report_expected_variable_name(&token);
+      }
+      _ => {
+        self.diagnostics.report_unexpected_token(&kind, &token);
+      }
+    }
+
+    Err(())
   }
 
   fn peek(&mut self) -> Token {

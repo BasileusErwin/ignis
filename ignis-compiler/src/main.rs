@@ -1,4 +1,5 @@
 mod ast;
+mod diagnostic;
 
 use std::{
   io::{self, Write, BufRead},
@@ -7,15 +8,7 @@ use std::{
   fs,
 };
 
-use ast::{
-  parser::Parser,
-  lexer::Lexer,
-  expression,
-  statement::{self, Statement},
-  evaluator::{Evaluator, self},
-  visitor::Visitor,
-  Ast,
-};
+use ast::{parser::Parser, lexer::Lexer, evaluator::Evaluator, Ast};
 
 fn run_file(path: &str) -> Result<(), String> {
   let mut evaluator = Evaluator::new();
@@ -27,11 +20,6 @@ fn run_file(path: &str) -> Result<(), String> {
 }
 
 fn run(source: String, evaluator: &mut Evaluator) -> Result<(), String> {
-  if source.trim() == String::from("exit") {
-    println!("Bye!");
-    exit(0);
-  }
-
   let mut lexer: Lexer<'_> = Lexer::new(&source);
   lexer.scan_tokens();
 
@@ -48,10 +36,17 @@ fn run(source: String, evaluator: &mut Evaluator) -> Result<(), String> {
       for statement in statements {
         ast.add(statement);
       }
+
       ast.visit(evaluator);
+
+      for diagnostic in evaluator.diagnostics.borrow().diagnostics.iter() {
+        println!("{:?}", diagnostic);
+      }
+
+      evaluator.diagnostics.borrow_mut().clean_diagnostic();
     }
-    Err(errors) => {
-      for error in errors {
+    Err(_) => {
+      for error in parser.diagnostics.diagnostics {
         println!("{:?}", error);
       }
     }
@@ -83,6 +78,11 @@ fn run_prompt() -> Result<(), String> {
         }
       }
       Err(_) => return Err("Clound not read line".to_string()),
+    }
+
+    if buffer.trim() == String::from("exit") {
+      println!("Bye!");
+      exit(0);
     }
 
     match run(buffer, &mut evaluator) {
