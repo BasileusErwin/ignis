@@ -8,18 +8,35 @@ use std::{
   fs,
 };
 
-use ast::{parser::Parser, lexer::Lexer, evaluator::Evaluator, Ast};
+use ast::{
+  parser::{Parser, ParserResult},
+  lexer::Lexer,
+  evaluator::Evaluator,
+  Ast,
+};
+use diagnostic::DiagnosticList;
 
-fn run_file(path: &str) -> Result<(), String> {
+fn display_diagnostic(diagnostics: &DiagnosticList) {
+  for diagnostic in diagnostics.diagnostics.iter() {
+    println!("{}: {}", diagnostic.code, diagnostic.hint.as_ref().unwrap());
+    // println!(
+    //   "{} | {}",
+    //   diagnostic.span.line,
+    //   diagnostic.span.literal
+    // );
+  }
+}
+
+fn run_file(path: &str) -> Result<(), ()> {
   let mut evaluator = Evaluator::new();
 
   match fs::read_to_string(path) {
     Ok(content) => run(content, &mut evaluator),
-    Err(message) => Err(message.to_string()),
+    Err(_) => Err(()),
   }
 }
 
-fn run(source: String, evaluator: &mut Evaluator) -> Result<(), String> {
+fn run(source: String, evaluator: &mut Evaluator) -> Result<(), ()> {
   let mut lexer: Lexer<'_> = Lexer::new(&source);
   lexer.scan_tokens();
 
@@ -31,26 +48,23 @@ fn run(source: String, evaluator: &mut Evaluator) -> Result<(), String> {
   let expressions = parser.parse();
   let mut ast = Ast::new();
 
-  match expressions {
-    Ok(statements) => {
-      for statement in statements {
-        ast.add(statement);
-      }
-
-      ast.visit(evaluator);
-
-      for diagnostic in evaluator.diagnostics.borrow().diagnostics.iter() {
-        println!("{:?}", diagnostic);
-      }
-
-      evaluator.diagnostics.borrow_mut().clean_diagnostic();
-    }
-    Err(_) => {
-      for error in parser.diagnostics.diagnostics {
-        println!("{:?}", error);
+  for expression in expressions {
+    match expression {
+      ParserResult::Statement(expr) => ast.add(expr),
+      _ => {
+        display_diagnostic(&parser.diagnostics);
+        return Err(());
       }
     }
   }
+
+  ast.visit(evaluator);
+
+  if evaluator.diagnostics.borrow().diagnostics.len() > 0 {
+    display_diagnostic(&evaluator.diagnostics.borrow());
+  }
+
+  evaluator.diagnostics.borrow_mut().clean_diagnostic();
 
   Ok(())
 }
@@ -87,7 +101,7 @@ fn run_prompt() -> Result<(), String> {
 
     match run(buffer, &mut evaluator) {
       Ok(_) => (),
-      Err(message) => println!("{}", message),
+      Err(()) => (),
     }
   }
 }
@@ -96,13 +110,7 @@ fn main() {
   let args: Vec<String> = env::args().collect();
 
   if args.len() == 2 {
-    match run_file(&args[1]) {
-      Ok(_) => exit(0),
-      Err(msg) => {
-        println!("ERROR\n{}", msg);
-        exit(1);
-      }
-    }
+    run_file(&args[1]);
   } else {
     match run_prompt() {
       Ok(_) => exit(0),

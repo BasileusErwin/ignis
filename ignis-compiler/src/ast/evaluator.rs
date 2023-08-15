@@ -1,7 +1,7 @@
 use std::{
   rc::Rc,
   cell::{RefCell, Ref},
-  env,
+  env, result,
 };
 
 use crate::diagnostic::DiagnosticList;
@@ -14,7 +14,8 @@ use super::{
   },
   lexer::token_type::TokenType,
   statement::{expression::ExpressionStatement, variable::Variable, Statement},
-  environment::{Environment, VariableEnvironment},
+  environment::{Environment, VariableEnvironment, EnvironmentResult},
+  data_type::DataType,
 };
 
 #[derive(Debug, PartialEq, Clone)]
@@ -37,6 +38,21 @@ impl EvaluatorValue {
       EvaluatorValue::None | EvaluatorValue::Null => "null".to_string(),
     }
   }
+
+  pub fn to_data_type(&self) -> DataType {
+    match self {
+      EvaluatorValue::String(_) => DataType::String,
+      EvaluatorValue::Int(_) => DataType::Int,
+      EvaluatorValue::Double(_) => DataType::Double,
+      EvaluatorValue::Boolean(_) => DataType::Boolean,
+      EvaluatorValue::None | EvaluatorValue::Null => DataType::None,
+    }
+  }
+}
+
+pub enum EvaluatorResult {
+  Value(EvaluatorValue),
+  Error,
 }
 
 pub struct Evaluator {
@@ -44,15 +60,40 @@ pub struct Evaluator {
   pub diagnostics: Rc<RefCell<DiagnosticList>>,
 }
 
-impl Visitor<Result<EvaluatorValue, ()>> for Evaluator {
-  fn visit_binary_expression(&self, expression: &Binary) -> Result<EvaluatorValue, ()> {
-    let left = self.evaluator(&*expression.left)?;
-    let right = self.evaluator(&*expression.right)?;
+impl Visitor<EvaluatorResult> for Evaluator {
+  fn visit_binary_expression(&self, expression: &Binary) -> EvaluatorResult {
+    let result_left = self.evaluator(&*expression.left);
+    let result_right = self.evaluator(&*expression.right);
+    let left: EvaluatorValue;
+    let right: EvaluatorValue;
+
+    match result_left {
+      EvaluatorResult::Value(v) => left = v,
+      EvaluatorResult::Error => return EvaluatorResult::Error,
+    }
+
+    match result_right {
+      EvaluatorResult::Value(v) => right = v,
+      EvaluatorResult::Error => return EvaluatorResult::Error,
+    }
+
     let mut diagnostics = self.diagnostics.borrow_mut();
 
     let result: EvaluatorValue = match expression.operator.kind {
-      TokenType::BangEqual => EvaluatorValue::Boolean(!self.is_equal(&left, &right)?),
-      TokenType::EqualEqual => EvaluatorValue::Boolean(self.is_equal(&left, &right)?),
+      TokenType::BangEqual => {
+        if let Ok(v) = self.is_equal(&left, &right) {
+          EvaluatorValue::Boolean(!v)
+        } else {
+          EvaluatorValue::None
+        }
+      }
+      TokenType::EqualEqual => {
+        if let Ok(v) = self.is_equal(&left, &right) {
+          EvaluatorValue::Boolean(v)
+        } else {
+          EvaluatorValue::None
+        }
+      }
       TokenType::Greater => match (&left, &right) {
         (EvaluatorValue::Int(l), EvaluatorValue::Int(r)) => EvaluatorValue::Boolean(l > r),
         (EvaluatorValue::Double(l), EvaluatorValue::Double(r)) => EvaluatorValue::Boolean(l > r),
@@ -99,135 +140,143 @@ impl Visitor<Result<EvaluatorValue, ()>> for Evaluator {
       _ => {
         diagnostics.report_invalid_operator(&expression.operator);
 
-        return Err(());
+        return EvaluatorResult::Error;
       }
     };
 
     if result == EvaluatorValue::None {
       diagnostics.report_invalid_operator_for_data_type(&expression.operator, &left, &right);
 
-      return Err(());
+      return EvaluatorResult::Error;
     }
 
-    Ok(result)
+    EvaluatorResult::Value(result)
   }
 
-  fn visit_grouping_expression(&self, expression: &Grouping) -> Result<EvaluatorValue, ()> {
+  fn visit_grouping_expression(&self, expression: &Grouping) -> EvaluatorResult {
     self.evaluator(&expression.expression)
   }
 
-  fn visit_literal_expression(&self, expression: &Literal) -> Result<EvaluatorValue, ()> {
+  fn visit_literal_expression(&self, expression: &Literal) -> EvaluatorResult {
     match expression.value.clone() {
-      LiteralValue::Boolean(value) => Ok(EvaluatorValue::Boolean(value)),
-      LiteralValue::Double(value) => Ok(EvaluatorValue::Double(value)),
-      LiteralValue::Int(value) => Ok(EvaluatorValue::Int(value)),
-      LiteralValue::String(value) => Ok(EvaluatorValue::String(value)),
-      LiteralValue::Char(_) | LiteralValue::None => Err(()),
+      LiteralValue::Boolean(value) => EvaluatorResult::Value(EvaluatorValue::Boolean(value)),
+      LiteralValue::Double(value) => EvaluatorResult::Value(EvaluatorValue::Double(value)),
+      LiteralValue::Int(value) => EvaluatorResult::Value(EvaluatorValue::Int(value)),
+      LiteralValue::String(value) => EvaluatorResult::Value(EvaluatorValue::String(value)),
+      LiteralValue::Char(_) | LiteralValue::None => EvaluatorResult::Error,
     }
   }
 
-  fn visit_unary_expression(&self, expression: &Unary) -> Result<EvaluatorValue, ()> {
-    let right = self.evaluator(&expression.right)?;
+  fn visit_unary_expression(&self, expression: &Unary) -> EvaluatorResult {
+    let result = self.evaluator(&expression.right);
+    let right: EvaluatorValue;
     let mut diagnostics = self.diagnostics.borrow_mut();
 
-    match expression.operator.kind {
-      TokenType::Bang => Ok(EvaluatorValue::Boolean(!self.is_truthy(&right))),
-      TokenType::Minus => match right {
-        EvaluatorValue::Double(r) => Ok(EvaluatorValue::Double(-r)),
-        EvaluatorValue::Int(r) => Ok(EvaluatorValue::Int(-r)),
-        _ => {
-          diagnostics.report_invalid_unary_operator_for_data_type(&expression.operator, &right);
-          Err(())
-        }
-      },
-      _ => {
-        diagnostics.report_invalid_operator(&expression.operator);
-        Err(())
-      }
+    match result {
+      EvaluatorResult::Value(v) => right = v,
+      EvaluatorResult::Error => return EvaluatorResult::Error,
     }
+
+    match expression.operator.kind {
+      TokenType::Bang => {
+        return EvaluatorResult::Value(EvaluatorValue::Boolean(!self.is_truthy(&right)))
+      }
+      TokenType::Minus => match right {
+        EvaluatorValue::Double(r) => return EvaluatorResult::Value(EvaluatorValue::Double(-r)),
+        EvaluatorValue::Int(r) => return EvaluatorResult::Value(EvaluatorValue::Int(-r)),
+        _ => diagnostics.report_invalid_unary_operator_for_data_type(&expression.operator, &right),
+      },
+      _ => diagnostics.report_invalid_operator(&expression.operator),
+    };
+
+    EvaluatorResult::Error
   }
 
-  fn visit_expression_statement(
-    &self,
-    statement: &ExpressionStatement,
-  ) -> Result<EvaluatorValue, ()> {
+  fn visit_expression_statement(&self, statement: &ExpressionStatement) -> EvaluatorResult {
     self.evaluator(&statement.expression)
   }
 
-  fn visit_variable_statement(&self, variable: &Variable) -> Result<EvaluatorValue, ()> {
-    let mut value: Option<EvaluatorValue> = None;
+  fn visit_variable_statement(&self, variable: &Variable) -> EvaluatorResult {
+    let mut value: EvaluatorValue = EvaluatorValue::Null;
 
     if let Some(initializer) = &variable.initializer {
-      value = Some(self.evaluator(initializer)?);
+      match self.evaluator(initializer) {
+        EvaluatorResult::Value(v) => value = v,
+        EvaluatorResult::Error => return EvaluatorResult::Error,
+      }
     }
 
     let mut environment = self.environment.borrow_mut();
 
     match environment.define(
       variable.name.span.literal.clone(),
-      VariableEnvironment::new(value.unwrap(), variable.is_mutable),
+      VariableEnvironment::new(value.clone(), variable.is_mutable),
     ) {
-      Ok(_) => return Ok(EvaluatorValue::None),
-      Err(_) => {
-        self
-          .diagnostics
-          .borrow_mut()
-          .report_invalid_redeclared_variable(&variable.name);
-
-        return Err(());
+      EnvironmentResult::Suscess(_) => {
+        return EvaluatorResult::Value(value);
       }
+      EnvironmentResult::Error => (),
     };
+
+    return EvaluatorResult::Error;
   }
 
-  fn visit_variable_expressin(&self, variable: &VariableExpression) -> Result<EvaluatorValue, ()> {
+  fn visit_variable_expressin(&self, variable: &VariableExpression) -> EvaluatorResult {
     let environment = self.environment.borrow_mut();
     let mut diagnostics = self.diagnostics.borrow_mut();
 
     match environment.get(variable.name.clone()) {
-      Ok(env) => {
+      EnvironmentResult::Suscess(env) => {
         if let Some(e) = env {
-          Ok(e.values.clone())
-        } else {
-          Err(())
+          return EvaluatorResult::Value(e.values.clone());
         }
       }
-      Err(_) => {
+      EnvironmentResult::Error => {
         diagnostics.report_undeclared_variable(&variable.name);
-        Err(())
       }
-    }
+    };
+
+    return EvaluatorResult::Error;
   }
 
-  fn visit_assign_expression(&self, expression: &Assign) -> Result<EvaluatorValue, ()> {
-    let value = self.evaluator(&expression.value)?;
+  // TODO: Validate if a variable is being declared for the first time without using the let or const keyword
+  fn visit_assign_expression(&self, expression: &Assign) -> EvaluatorResult {
+    let value: EvaluatorValue = match self.evaluator(&expression.value) {
+      EvaluatorResult::Value(v) => v,
+      EvaluatorResult::Error => return EvaluatorResult::Error,
+    };
+
     let mut environment = self.environment.borrow_mut();
     let mut diagnostics = self.diagnostics.borrow_mut();
 
     match environment.assign(
-      expression.name.clone(),
+      &expression.name,
       VariableEnvironment::new(value.clone(), true),
+      &mut diagnostics,
     ) {
-      Ok(_) => Ok(value),
-      Err(_) => {
-        diagnostics.report_invalid_redeclared_variable(&expression.name);
-        Err(())
-      }
-    }
+      EnvironmentResult::Suscess(_) => return EvaluatorResult::Value(value),
+      EnvironmentResult::Error => (),
+    };
+
+    return EvaluatorResult::Error;
   }
 
   fn visit_logical_expression(
     &self,
     expression: &super::expression::logical::Logical,
-  ) -> Result<EvaluatorValue, ()> {
-    let left = self.evaluator(&expression.left)?;
+  ) -> EvaluatorResult {
+    let left: EvaluatorValue = match self.evaluator(&expression.left) {
+      EvaluatorResult::Value(value) => value,
+      EvaluatorResult::Error => return EvaluatorResult::Error,
+    };
 
     if expression.operator.kind == TokenType::Or {
       if self.is_truthy(&left) {
-        return Ok(left);
+        return EvaluatorResult::Value(left);
       }
     } else {
       if !self.is_truthy(&left) {
-        return Ok(left);
+        return EvaluatorResult::Value(left);
       }
     }
 
@@ -243,7 +292,7 @@ impl Evaluator {
     }
   }
 
-  pub fn evaluator(&self, expression: &Expression) -> Result<EvaluatorValue, ()> {
+  pub fn evaluator(&self, expression: &Expression) -> EvaluatorResult {
     expression.accept(self)
   }
 

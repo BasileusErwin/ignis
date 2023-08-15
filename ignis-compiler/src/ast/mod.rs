@@ -12,6 +12,7 @@ use crate::ast::evaluator::EvaluatorValue;
 use self::{
   statement::{Statement, variable},
   visitor::Visitor,
+  evaluator::EvaluatorResult,
 };
 
 #[derive(Debug)]
@@ -30,15 +31,15 @@ impl Ast {
     self.statementes.push(statement);
   }
 
-  pub fn visit(&mut self, visitor: &mut dyn Visitor<Result<EvaluatorValue, ()>>) {
+  pub fn visit(&mut self, visitor: &mut dyn Visitor<EvaluatorResult>) {
     for statement in &self.statementes {
       match statement {
         Statement::Expression(expression) => {
           let value;
 
           match visitor.visit_expression_statement(expression) {
-            Ok(e) => value = e,
-            Err(_) => return,
+            EvaluatorResult::Error => return (),
+            EvaluatorResult::Value(v) => value = v,
           };
 
           match value {
@@ -53,8 +54,8 @@ impl Ast {
           let value;
 
           match visitor.visit_variable_statement(variable) {
-            Ok(v) => value = v,
-            Err(_) => return,
+            EvaluatorResult::Error => return (),
+            EvaluatorResult::Value(v) => value = v,
           };
 
           match value {

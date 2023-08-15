@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::ast::{
   lexer::{text_span::TextSpan, token_type::TokenType, token::Token},
   data_type::DataType,
@@ -10,11 +12,20 @@ pub enum DiagnosticLevel {
   Error,
 }
 
+impl Display for DiagnosticLevel {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      DiagnosticLevel::Warning => write!(f, "Warning"),
+      DiagnosticLevel::Error => write!(f, "Error"),
+    }
+  }
+}
+
 #[derive(Debug)]
 pub struct Diagnostic {
-  code: DiagnosticLevel,
-  span: Box<TextSpan>,
-  hint: Option<String>,
+ pub code: DiagnosticLevel,
+ pub span: Box<TextSpan>,
+ pub hint: Option<String>,
 }
 
 impl Diagnostic {
@@ -23,6 +34,7 @@ impl Diagnostic {
   }
 }
 
+#[derive(Debug)]
 pub struct DiagnosticList {
   pub diagnostics: Vec<Diagnostic>,
 }
@@ -161,7 +173,7 @@ impl DiagnosticList {
     );
   }
 
-  pub fn report_invalid_redeclared_variable(&mut self, token: &Token) {
+  pub fn report_invalid_reassigned_variable(&mut self, token: &Token) {
     self.report_error(
       format!(
         "An immutable variable was reassigned '{}'",

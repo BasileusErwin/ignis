@@ -4,7 +4,7 @@ pub mod variable;
 use expression::ExpressionStatement;
 use variable::Variable;
 
-use super::{visitor::Visitor, expression::Expression};
+use super::visitor::Visitor;
 
 #[derive(Debug)]
 pub enum Statement {
