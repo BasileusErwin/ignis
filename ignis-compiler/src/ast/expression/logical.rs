@@ -2,7 +2,7 @@ use crate::ast::{lexer::token::Token, data_type::DataType};
 
 use super::Expression;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Logical {
   pub left: Box<Expression>,
   pub operator: Token,

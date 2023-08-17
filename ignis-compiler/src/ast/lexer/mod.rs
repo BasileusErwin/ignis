@@ -169,6 +169,9 @@ impl<'a> Lexer<'a> {
           TokenType::Ampersand
         };
       }
+      '?' => {
+        token = TokenType::QuestionMark;
+      }
       '/' => {
         if self.match_char('*') {
           while !self.is_at_end() {

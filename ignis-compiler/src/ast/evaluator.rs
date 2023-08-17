@@ -10,7 +10,7 @@ use super::{
   visitor::Visitor,
   expression::{
     Expression, binary::Binary, literal::Literal, LiteralValue, grouping::Grouping, unary::Unary,
-    variable::VariableExpression, assign::Assign,
+    variable::VariableExpression, assign::Assign, ternary::Ternary,
   },
   lexer::token_type::TokenType,
   statement::{
@@ -98,7 +98,9 @@ impl Visitor<EvaluatorResult> for Evaluator {
         }
       }
       TokenType::Greater => match (&left, &right) {
-        (EvaluatorValue::Int(l), EvaluatorValue::Int(r)) => EvaluatorValue::Boolean(l > r),
+        (EvaluatorValue::Int(l), EvaluatorValue::Int(r)) =>  {
+         EvaluatorValue::Boolean(l > r)
+        }
         (EvaluatorValue::Double(l), EvaluatorValue::Double(r)) => EvaluatorValue::Boolean(l > r),
         _ => EvaluatorValue::None,
       },
@@ -325,6 +327,22 @@ impl Visitor<EvaluatorResult> for Evaluator {
     }
 
     EvaluatorResult::Value(EvaluatorValue::None)
+  }
+
+  fn visit_ternary_expression(
+    &self,
+    expression: &Ternary,
+  ) -> EvaluatorResult {
+    let condition: EvaluatorValue = match self.evaluator(&expression.condition) {
+      EvaluatorResult::Value(value) => value,
+      EvaluatorResult::Error => return EvaluatorResult::Error,
+    };
+    
+    if self.is_truthy(&condition) {
+      return self.evaluator(&expression.then_branch);
+    } else {
+      return self.evaluator(&expression.else_branch);
+    }
   }
 }
 

@@ -21,6 +21,7 @@ fn display_diagnostic(diagnostics: &DiagnosticList, relp: bool) {
     println!("{}: {}", diagnostic.code, diagnostic.hint.as_ref().unwrap());
     if relp {
       println!("{} | {}", diagnostic.span.line, diagnostic.span.literal);
+      println!("Column: {}", diagnostic.span.end - diagnostic.span.start);
     }
   }
 }

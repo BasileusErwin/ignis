@@ -4,11 +4,11 @@ use super::{
   lexer::{token::Token, token_type::TokenType},
   expression::{
     Expression, binary::Binary, unary::Unary, literal::Literal, LiteralValue, grouping::Grouping,
-    logical::Logical, assign::Assign, variable::VariableExpression, self,
+    logical::Logical, assign::Assign, variable::VariableExpression, self, ternary,
   },
   statement::{
     Statement, variable::Variable, expression::ExpressionStatement, if_statement::IfStatement,
-    block::Block, while_statement::WhileStatement,
+    block::Block, while_statement::WhileStatement, self,
   },
   data_type::DataType,
 };
@@ -283,6 +283,7 @@ impl Parser {
       Expression::Variable(variable) => DataType::Variable(variable.name.span.literal.clone()),
       Expression::Assign(assign) => assign.data_type.clone(),
       Expression::Logical(logical) => logical.data_type.clone(),
+      Expression::Ternary(ternary) => ternary.data_type.clone(),
     }
   }
 
@@ -313,7 +314,7 @@ impl Parser {
     if self.match_token(&[TokenType::Let, TokenType::Const]) {
       return self.variable_declaration();
     }
-    
+
     if self.match_token(&[TokenType::While]) {
       return self.while_statement();
     }
@@ -384,15 +385,7 @@ impl Parser {
 
     match self.consume(TokenType::SemiColon) {
       ParserResult::Token(_) => (),
-      _ => {
-        let token = self.peek();
-
-        self
-          .diagnostics
-          .report_unexpected_token(&TokenType::SemiColon, &token);
-
-        return ParserResult::Error;
-      }
+      _ => return ParserResult::Error,
     };
 
     if let Some(ini) = initializer {
@@ -442,7 +435,7 @@ impl Parser {
   }
 
   fn assignment(&mut self) -> ParserResult {
-    let mut expression: Expression = match self.or_expression() {
+    let mut expression: Expression = match self.ternary() {
       ParserResult::Expression(e) => e,
       _ => return ParserResult::Error,
     };
@@ -470,6 +463,56 @@ impl Parser {
     }
 
     return ParserResult::Expression(expression);
+  }
+
+  fn ternary(&mut self) -> ParserResult {
+    let mut children: Vec<Expression> = match self.or_expression() {
+      ParserResult::Expression(e) => vec![e],
+      _ => return ParserResult::Error,
+    };
+
+    while self.match_token(&[TokenType::QuestionMark]) {
+      match self.expression() {
+        ParserResult::Expression(e) => children.push(e),
+        _ => return ParserResult::Error,
+      }
+
+      match self.consume(TokenType::Colon) {
+        ParserResult::Token(_) => (),
+        _ => return ParserResult::Error,
+      }
+
+      match self.expression() {
+        ParserResult::Expression(e) => children.push(e),
+        _ => return ParserResult::Error,
+      }
+    }
+
+    if children.len() == 1 {
+      return ParserResult::Expression(children.pop().unwrap());
+    }
+
+    let then_branch = children.pop().unwrap();
+    let else_branch = children.pop().unwrap();
+    let condition = children.pop().unwrap();
+
+    let mut expression: Expression = Expression::Ternary(ternary::Ternary::new(
+      Box::new(condition),
+      Box::new(then_branch),
+      Box::new(else_branch),
+      DataType::Pending,
+    ));
+
+    while !children.is_empty() {
+      expression = Expression::Ternary(ternary::Ternary::new(
+        Box::new(children.pop().unwrap()),
+        Box::new(expression),
+        Box::new(children.pop().unwrap()),
+        DataType::Pending,
+      ));
+    }
+
+    ParserResult::Expression(expression)
   }
 
   fn or_expression(&mut self) -> ParserResult {
@@ -521,7 +564,7 @@ impl Parser {
 
     ParserResult::Expression(expression)
   }
-  
+
   fn while_statement(&mut self) -> ParserResult {
     match self.consume(TokenType::LeftParen) {
       ParserResult::Token(_) => (),
@@ -601,10 +644,17 @@ impl Parser {
           .report_unexpected_token(&TokenType::SemiColon, &token);
       }
       TokenType::Colon => {
-        self.diagnostics.report_expected_type_after_variable(&token);
+        self
+          .diagnostics
+          .report_unexpected_token(&TokenType::Colon, &token);
       }
       TokenType::Identifier => {
         self.diagnostics.report_expected_variable_name(&token);
+      }
+      TokenType::QuestionMark => {
+        self
+          .diagnostics
+          .report_expected_token(&TokenType::QuestionMark, &token);
       }
       TokenType::LeftParen | TokenType::RightParen => {
         let expression = self.previous();

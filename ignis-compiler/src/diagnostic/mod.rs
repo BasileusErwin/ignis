@@ -207,4 +207,11 @@ impl DiagnosticList {
       token.span.clone(),
     );
   }
+  
+  pub fn report_expected_token(&mut self, expected: &TokenType, token: &Token) {
+    self.report_error(
+      format!("Expected '{}', found '{}'", expected.to_string(), token.kind.to_string()),
+      token.span.clone(),
+    );
+  }
 }

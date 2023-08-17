@@ -1,6 +1,6 @@
 use self::{
   binary::Binary, grouping::Grouping, literal::Literal, unary::Unary, variable::VariableExpression,
-  logical::Logical, assign::Assign,
+  logical::Logical, assign::Assign, ternary::Ternary,
 };
 
 use super::{
@@ -15,8 +15,9 @@ pub mod literal;
 pub mod logical;
 pub mod unary;
 pub mod variable;
+pub mod ternary;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Expression {
   Binary(Binary),
   Grouping(Grouping),
@@ -25,6 +26,7 @@ pub enum Expression {
   Variable(VariableExpression),
   Assign(Assign),
   Logical(Logical),
+  Ternary(Ternary)
 }
 
 impl Expression {
@@ -37,6 +39,7 @@ impl Expression {
       Expression::Variable(variable) => visitor.visit_variable_expressin(variable),
       Expression::Assign(assign) => visitor.visit_assign_expression(assign),
       Expression::Logical(logical) => visitor.visit_logical_expression(logical),
+      Expression::Ternary(ternary) => visitor.visit_ternary_expression(ternary),
     }
   }
 
@@ -89,6 +92,17 @@ impl Expression {
         operator.span.literal,
         right.to_string()
       ),
+        Expression::Ternary(Ternary {
+            condition,
+            then_branch,
+            else_branch,
+            ..
+        }) => format!(
+            "({} ? {} : {})",
+            condition.to_string(),
+            then_branch.to_string(),
+            else_branch.to_string()
+        ),
     }
   }
 }

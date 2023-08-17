@@ -1,7 +1,7 @@
 use super::Expression;
 use crate::ast::{lexer::token::Token, data_type::DataType};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Unary {
   pub operator: Token,
   pub right: Box<Expression>,

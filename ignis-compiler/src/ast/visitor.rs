@@ -1,7 +1,7 @@
 use super::{
   expression::{
     binary::Binary, literal::Literal, unary::Unary, grouping::Grouping,
-    variable::VariableExpression, assign::Assign, logical::Logical,
+    variable::VariableExpression, assign::Assign, logical::Logical, ternary::Ternary,
   },
   statement::{
     expression::ExpressionStatement, variable::Variable, if_statement::IfStatement, block::Block,
@@ -18,6 +18,7 @@ pub trait Visitor<R> {
   fn visit_variable_expressin(&self, variable: &VariableExpression) -> R;
   fn visit_assign_expression(&self, expression: &Assign) -> R;
   fn visit_logical_expression(&self, expression: &Logical) -> R;
+  fn visit_ternary_expression(&self, expression: &Ternary) -> R;
 
   // Statements
   fn visit_expression_statement(&self, statement: &ExpressionStatement) -> R;

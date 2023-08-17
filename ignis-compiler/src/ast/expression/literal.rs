@@ -1,6 +1,6 @@
 use super::LiteralValue;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Literal {
   pub value: LiteralValue,
 }

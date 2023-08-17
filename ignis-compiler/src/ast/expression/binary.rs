@@ -4,7 +4,7 @@ use crate::ast::{
 };
 use super::Expression;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Binary {
   pub left: Box<Expression>,
   pub operator: Token,

@@ -1,6 +1,6 @@
 use super::Expression;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Grouping {
   pub expression: Box<Expression>,
 }

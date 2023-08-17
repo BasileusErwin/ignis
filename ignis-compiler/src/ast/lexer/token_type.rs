@@ -6,20 +6,21 @@ use std::fmt::{Display, Formatter};
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
   // Single-character tokens
-  Plus,       // +
-  Minus,      // -
-  Asterisk,   // *
-  Slash,      // /
-  LeftParen,  // (
-  RightParen, // )
-  LeftBrace,  // {
-  RightBrace, // }
-  LeftBrack,  // [
-  RightBrack, // ]
-  Colon,      // :
-  Pipe,       // |
-  Ampersand,  // &
-  Mod,        // %
+  Plus,         // +
+  Minus,        // -
+  Asterisk,     // *
+  Slash,        // /
+  LeftParen,    // (
+  RightParen,   // )
+  LeftBrace,    // {
+  RightBrace,   // }
+  LeftBrack,    // [
+  RightBrack,   // ]
+  Colon,        // :
+  Pipe,         // |
+  Ampersand,    // &
+  Mod,          // %
+  QuestionMark, // ?
 
   // One or two character tokens
   Equal,        // =
@@ -94,7 +95,7 @@ pub enum TokenType {
 impl TokenType {
   fn to_string(&self) -> String {
     match self {
-      TokenType::Plus => "+".to_string(), 
+      TokenType::Plus => "+".to_string(),
       TokenType::Minus => "-".to_string(),
       TokenType::Ampersand => "&".to_string(),
       TokenType::Asterisk => "*".to_string(),
@@ -112,6 +113,7 @@ impl TokenType {
       TokenType::Dot => ".".to_string(),
       TokenType::Mod => "%".to_string(),
       TokenType::Equal => "=".to_string(),
+      TokenType::QuestionMark => "?".to_string(),
       TokenType::EqualEqual => "==".to_string(),
       TokenType::Bang => "!".to_string(),
       TokenType::BangEqual => "!=".to_string(),
@@ -166,7 +168,7 @@ impl TokenType {
       TokenType::Bad => "bad".to_string(),
       TokenType::Identifier => "identifier".to_string(),
       TokenType::Eof => "eof".to_string(),
-      _ => String::new()
+      _ => String::new(),
     }
   }
 }
@@ -246,6 +248,7 @@ impl Display for TokenType {
       TokenType::Bad => write!(f, "bad"),
       TokenType::Identifier => write!(f, "identifier"),
       TokenType::Eof => write!(f, "eof"),
+      TokenType::QuestionMark => write!(f, "?"),
     }
   }
 }

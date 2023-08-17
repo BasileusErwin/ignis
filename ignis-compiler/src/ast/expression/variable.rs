@@ -3,7 +3,7 @@ use crate::ast::{
   data_type::{DataType, self},
 };
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct VariableExpression {
   pub name: Token,
   pub data_type: DataType,
