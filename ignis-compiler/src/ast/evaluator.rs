@@ -13,7 +13,10 @@ use super::{
     variable::VariableExpression, assign::Assign,
   },
   lexer::token_type::TokenType,
-  statement::{expression::ExpressionStatement, variable::Variable, Statement},
+  statement::{
+    expression::ExpressionStatement, variable::Variable, Statement, if_statement::IfStatement,
+    block::Block,
+  },
   environment::{Environment, VariableEnvironment, EnvironmentResult},
   data_type::DataType,
 };
@@ -282,6 +285,47 @@ impl Visitor<EvaluatorResult> for Evaluator {
 
     self.evaluator(&expression.right)
   }
+
+  fn visit_block(&mut self, block: &Block) -> EvaluatorResult {
+    self.execute_block(&block.statements, self.environment.clone())
+  }
+
+  fn visit_if_statement(&mut self, statement: &IfStatement) -> EvaluatorResult {
+    let condition: EvaluatorValue = match self.evaluator(&statement.condition) {
+      EvaluatorResult::Value(value) => value,
+      EvaluatorResult::Error => return EvaluatorResult::Error,
+    };
+
+    if self.is_truthy(&condition) {
+      self.execute(statement.then_branch.as_ref());
+    } else if let Some(else_branch) = &statement.else_branch {
+      self.execute(else_branch.as_ref());
+    }
+
+    EvaluatorResult::Value(EvaluatorValue::None)
+  }
+
+  fn visit_while_statement(
+    &mut self,
+    statement: &super::statement::while_statement::WhileStatement,
+  ) -> EvaluatorResult {
+    loop {
+      let evaluator = self.evaluator(&statement.condition);
+
+      match evaluator {
+        EvaluatorResult::Value(value) => {
+          if !self.is_truthy(&value) {
+            break;
+          }
+
+          self.execute(statement.body.as_ref());
+        }
+        EvaluatorResult::Error => return EvaluatorResult::Error,
+      }
+    }
+
+    EvaluatorResult::Value(EvaluatorValue::None)
+  }
 }
 
 impl Evaluator {
@@ -296,8 +340,26 @@ impl Evaluator {
     expression.accept(self)
   }
 
-  pub fn execute(&mut self, statement: Statement) {
+  pub fn execute(&mut self, statement: &Statement) {
     statement.accept(self);
+  }
+
+  pub fn execute_block(
+    &mut self,
+    statement: &Vec<Statement>,
+    environment: Rc<RefCell<Environment>>,
+  ) -> EvaluatorResult {
+    let previous = self.environment.clone();
+
+    self.environment = environment;
+
+    for statement in statement {
+      self.execute(&statement);
+    }
+
+    self.environment = previous;
+
+    EvaluatorResult::Value(EvaluatorValue::None)
   }
 
   fn is_equal(&self, left: &EvaluatorValue, right: &EvaluatorValue) -> Result<bool, ()> {

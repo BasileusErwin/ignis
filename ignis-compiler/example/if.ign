@@ -1,0 +1,13 @@
+let num: int = 1;
+
+if (true) {
+	let num2: int = 2;
+
+	num + num2;
+}
+
+if (true) {
+ 	let num2: int = 3;
+
+	num + num2;
+}

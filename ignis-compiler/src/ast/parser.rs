@@ -1,17 +1,19 @@
-use std::string::ParseError;
-
 use crate::diagnostic::{DiagnosticList, Diagnostic};
 
 use super::{
   lexer::{token::Token, token_type::TokenType},
   expression::{
     Expression, binary::Binary, unary::Unary, literal::Literal, LiteralValue, grouping::Grouping,
-    logical::Logical, assign::Assign, variable::VariableExpression,
+    logical::Logical, assign::Assign, variable::VariableExpression, self,
   },
-  statement::{Statement, variable::Variable, expression::ExpressionStatement},
+  statement::{
+    Statement, variable::Variable, expression::ExpressionStatement, if_statement::IfStatement,
+    block::Block, while_statement::WhileStatement,
+  },
   data_type::DataType,
 };
 
+#[derive(Debug)]
 pub enum ParserResult {
   Expression(Expression),
   Statement(Statement),
@@ -39,10 +41,7 @@ impl Parser {
     while !self.is_at_end() {
       statements.push(match self.declaration() {
         ParserResult::Statement(s) => ParserResult::Statement(s),
-        _ => {
-          self.synchronize();
-          ParserResult::Error
-        }
+        _ => ParserResult::Error,
       });
     }
 
@@ -212,12 +211,21 @@ impl Parser {
         self.advance();
         match self.expression() {
           ParserResult::Expression(e) => {
-            self.consume(TokenType::RightParen);
+            match self.consume(TokenType::RightParen) {
+              ParserResult::Token(_) => (),
+              _ => {
+                return ParserResult::Error;
+              }
+            }
 
             return ParserResult::Expression(Expression::Grouping(Grouping::new(Box::new(e))));
           }
           _ => return ParserResult::Error,
         };
+      }
+      TokenType::Let | TokenType::Const => {
+        self.advance();
+        return self.variable_declaration();
       }
       TokenType::Identifier => {
         self.advance();
@@ -305,8 +313,34 @@ impl Parser {
     if self.match_token(&[TokenType::Let, TokenType::Const]) {
       return self.variable_declaration();
     }
+    
+    if self.match_token(&[TokenType::While]) {
+      return self.while_statement();
+    }
 
-    self.statement()
+    match self.statement() {
+      ParserResult::Statement(s) => ParserResult::Statement(s),
+      _ => {
+        self.synchronize();
+        ParserResult::Error
+      }
+    }
+  }
+
+  fn block(&mut self) -> ParserResult {
+    let mut statements: Vec<Statement> = Vec::new();
+
+    while !self.check(TokenType::RightBrace) && !self.is_at_end() {
+      statements.push(match self.declaration() {
+        ParserResult::Statement(s) => s,
+        _ => return ParserResult::Error,
+      });
+    }
+
+    match self.consume(TokenType::RightBrace) {
+      ParserResult::Token(_) => ParserResult::Statement(Statement::Block(Block::new(statements))),
+      _ => ParserResult::Error,
+    }
   }
 
   fn variable_declaration(&mut self) -> ParserResult {
@@ -376,8 +410,16 @@ impl Parser {
     }
   }
 
-  // statement -> expressionStatement;
+  // statement -> expressionStatement | ifStatement;
   fn statement(&mut self) -> ParserResult {
+    if self.match_token(&[TokenType::LeftBrace]) {
+      return self.block();
+    }
+
+    if self.match_token(&[TokenType::If]) {
+      return self.if_statement();
+    }
+
     self.expression_statement()
   }
 
@@ -479,6 +521,72 @@ impl Parser {
 
     ParserResult::Expression(expression)
   }
+  
+  fn while_statement(&mut self) -> ParserResult {
+    match self.consume(TokenType::LeftParen) {
+      ParserResult::Token(_) => (),
+      _ => return ParserResult::Error,
+    }
+
+    let condition: Expression = match self.expression() {
+      ParserResult::Expression(e) => e,
+      _ => return ParserResult::Error,
+    };
+
+    match self.consume(TokenType::RightParen) {
+      ParserResult::Token(_) => (),
+      _ => return ParserResult::Error,
+    }
+
+    let body: Statement = match self.statement() {
+      ParserResult::Statement(s) => s,
+      _ => return ParserResult::Error,
+    };
+
+    ParserResult::Statement(Statement::WhileStatement(WhileStatement::new(
+      Box::new(condition),
+      Box::new(body),
+    )))
+  }
+
+  fn if_statement(&mut self) -> ParserResult {
+    match self.consume(TokenType::LeftParen) {
+      ParserResult::Token(_) => (),
+      _ => return ParserResult::Error,
+    }
+
+    let condition: Expression = match self.expression() {
+      ParserResult::Expression(e) => e,
+      _ => return ParserResult::Error,
+    };
+
+    match self.consume(TokenType::RightParen) {
+      ParserResult::Token(_) => (),
+      _ => return ParserResult::Error,
+    }
+
+    let then_branch: Statement = match self.statement() {
+      ParserResult::Statement(s) => s,
+      _ => return ParserResult::Error,
+    };
+
+    let else_branch: Option<Statement> = if self.match_token(&[TokenType::Else]) {
+      let else_statement: Statement = match self.statement() {
+        ParserResult::Statement(s) => s,
+        _ => return ParserResult::Error,
+      };
+
+      Some(else_statement)
+    } else {
+      None
+    };
+
+    ParserResult::Statement(Statement::IfStatement(IfStatement::new(
+      Box::new(condition),
+      Box::new(then_branch),
+      else_branch.map(|s| Box::new(s)),
+    )))
+  }
 
   fn consume(&mut self, kind: TokenType) -> ParserResult {
     let token: Token = self.peek();
@@ -497,6 +605,13 @@ impl Parser {
       }
       TokenType::Identifier => {
         self.diagnostics.report_expected_variable_name(&token);
+      }
+      TokenType::LeftParen | TokenType::RightParen => {
+        let expression = self.previous();
+
+        self
+          .diagnostics
+          .report_expected_after_expression(&kind, &expression, &token);
       }
       _ => {
         self.diagnostics.report_unexpected_token(&kind, &token);

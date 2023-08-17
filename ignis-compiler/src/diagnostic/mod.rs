@@ -4,6 +4,7 @@ use crate::ast::{
   lexer::{text_span::TextSpan, token_type::TokenType, token::Token},
   data_type::DataType,
   evaluator::EvaluatorValue,
+  expression::Expression,
 };
 
 #[derive(Debug)]
@@ -23,9 +24,9 @@ impl Display for DiagnosticLevel {
 
 #[derive(Debug)]
 pub struct Diagnostic {
- pub code: DiagnosticLevel,
- pub span: Box<TextSpan>,
- pub hint: Option<String>,
+  pub code: DiagnosticLevel,
+  pub span: Box<TextSpan>,
+  pub hint: Option<String>,
 }
 
 impl Diagnostic {
@@ -186,6 +187,23 @@ impl DiagnosticList {
   pub fn report_redeclared_variable(&mut self, token: &Token) {
     self.report_error(
       format!("Variable '{}' was already declared", token.span.literal),
+      token.span.clone(),
+    );
+  }
+
+  pub fn report_expected_after_expression(
+    &mut self,
+    expected: &TokenType,
+    expression: &Token,
+    token: &Token,
+  ) {
+    self.report_error(
+      format!(
+        "Expected '{}' after {}', found '{}'",
+        expected.to_string(),
+        expression.kind.to_string(),
+        token.kind.to_string()
+      ),
       token.span.clone(),
     );
   }

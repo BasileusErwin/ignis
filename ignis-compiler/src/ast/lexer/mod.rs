@@ -65,10 +65,15 @@ impl<'a> Lexer<'a> {
     let c: char = self.advance();
     let mut token: TokenType = TokenType::Bad;
 
-    if c.is_whitespace() {
+    if c == ' ' || c == '\r' || c == '\t' {
       return;
     }
-
+    
+    if c == '\n' {
+      self.line += 1;
+      return;
+    }
+    
     match c {
       '(' => {
         token = TokenType::LeftParen;
@@ -187,11 +192,6 @@ impl<'a> Lexer<'a> {
           return;
         }
       }
-      '\n' => {
-        self.line += 1;
-        return;
-      }
-      ' ' | '\r' | '\t' => (),
       _ => {
         if c.is_ascii_digit() {
           if self.number() {
