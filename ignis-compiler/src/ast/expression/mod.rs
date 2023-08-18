@@ -1,6 +1,6 @@
 use self::{
   binary::Binary, grouping::Grouping, literal::Literal, unary::Unary, variable::VariableExpression,
-  logical::Logical, assign::Assign, ternary::Ternary,
+  logical::Logical, assign::Assign, ternary::Ternary, call::Call,
 };
 
 use super::{
@@ -10,12 +10,13 @@ use super::{
 
 pub mod assign;
 pub mod binary;
+pub mod call;
 pub mod grouping;
 pub mod literal;
 pub mod logical;
+pub mod ternary;
 pub mod unary;
 pub mod variable;
-pub mod ternary;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expression {
@@ -26,7 +27,8 @@ pub enum Expression {
   Variable(VariableExpression),
   Assign(Assign),
   Logical(Logical),
-  Ternary(Ternary)
+  Ternary(Ternary),
+  Call(Call),
 }
 
 impl Expression {
@@ -36,10 +38,11 @@ impl Expression {
       Expression::Binary(binary) => visitor.visit_binary_expression(binary),
       Expression::Literal(literal) => visitor.visit_literal_expression(literal),
       Expression::Unary(unary) => visitor.visit_unary_expression(unary),
-      Expression::Variable(variable) => visitor.visit_variable_expressin(variable),
+      Expression::Variable(variable) => visitor.visit_variable_expression(variable),
       Expression::Assign(assign) => visitor.visit_assign_expression(assign),
       Expression::Logical(logical) => visitor.visit_logical_expression(logical),
       Expression::Ternary(ternary) => visitor.visit_ternary_expression(ternary),
+      Expression::Call(call) => visitor.visit_call_expression(call),
     }
   }
 
@@ -92,17 +95,27 @@ impl Expression {
         operator.span.literal,
         right.to_string()
       ),
-        Expression::Ternary(Ternary {
-            condition,
-            then_branch,
-            else_branch,
-            ..
-        }) => format!(
-            "({} ? {} : {})",
-            condition.to_string(),
-            then_branch.to_string(),
-            else_branch.to_string()
-        ),
+      Expression::Ternary(Ternary {
+        condition,
+        then_branch,
+        else_branch,
+        ..
+      }) => format!(
+        "({} ? {} : {})",
+        condition.to_string(),
+        then_branch.to_string(),
+        else_branch.to_string()
+      ),
+      Expression::Call(call) => format!(
+        "fn {}({})",
+        call.callee.to_string(),
+        call
+          .arguments
+          .iter()
+          .map(|x| x.to_string())
+          .collect::<Vec<String>>()
+          .join(", ")
+      ),
     }
   }
 }

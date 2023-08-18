@@ -2,7 +2,7 @@ use crate::ast::expression::Expression;
 
 use super::Statement;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct WhileStatement {
 	pub condition: Box<Expression>,
 	pub body: Box<Statement>,

@@ -1,6 +1,6 @@
 use crate::ast::{expression::Expression, lexer::token::Token, data_type::DataType};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Variable {
   pub name: Box<Token>,
   pub initializer: Option<Box<Expression>>,

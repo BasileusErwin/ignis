@@ -9,6 +9,7 @@ pub enum DataType {
   Char,
   None,
   Pending,
+  Void,
   // TODO: Type non-primitive
   Variable(String),
   Array(Vec<DataType>),
@@ -32,6 +33,7 @@ impl DataType {
       TokenType::CharType => DataType::Char,
       TokenType::BooleanType => DataType::Boolean,
       TokenType::IntType => DataType::Int,
+      TokenType::Void => DataType::Void,
       _ => DataType::None,
     }
   }
@@ -69,6 +71,7 @@ impl DataType {
       }
       DataType::LiteralType(literal) => literal.clone(),
       DataType::AliasType(alias) => alias.clone(),
+      DataType::Void => "Void".to_string(),
     }
   }
 }

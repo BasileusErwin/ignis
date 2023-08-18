@@ -9,26 +9,59 @@ use crate::diagnostic::DiagnosticList;
 use super::{
   visitor::Visitor,
   expression::{
-    Expression, binary::Binary, literal::Literal, LiteralValue, grouping::Grouping, unary::Unary,
-    variable::VariableExpression, assign::Assign, ternary::Ternary,
+    Expression,
+    binary::Binary,
+    literal::Literal,
+    LiteralValue,
+    grouping::Grouping,
+    unary::Unary,
+    variable::VariableExpression,
+    assign::Assign,
+    ternary::Ternary,
+    call::{Call, self},
+    logical::Logical,
   },
   lexer::token_type::TokenType,
   statement::{
     expression::ExpressionStatement, variable::Variable, Statement, if_statement::IfStatement,
-    block::Block,
+    block::Block, function::FunctionStatement, return_statement::Return,
   },
-  environment::{Environment, VariableEnvironment, EnvironmentResult},
+  environment::{Environment, VariableEnvironment, EnvironmentResult, self},
   data_type::DataType,
+  callable::{Callable, function::Function, print::Println},
 };
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug)]
 pub enum EvaluatorValue {
   String(String),
   Int(i64),
   Double(f64),
   Boolean(bool),
+  Callable(Box<dyn Callable>),
+  Return(Box<EvaluatorValue>),
   Null,
   None,
+}
+
+impl EvaluatorValue {
+  pub fn to_variable_environment(&self) -> VariableEnvironment {
+    VariableEnvironment::new(self.clone(), true)
+  }
+}
+
+impl Clone for EvaluatorValue {
+  fn clone(&self) -> Self {
+    match self {
+      EvaluatorValue::String(s) => EvaluatorValue::String(s.clone()),
+      EvaluatorValue::Int(i) => EvaluatorValue::Int(*i),
+      EvaluatorValue::Double(d) => EvaluatorValue::Double(*d),
+      EvaluatorValue::Boolean(b) => EvaluatorValue::Boolean(*b),
+      EvaluatorValue::Null => EvaluatorValue::Null,
+      EvaluatorValue::None => EvaluatorValue::None,
+      EvaluatorValue::Callable(c) => EvaluatorValue::Callable(c.clone_box()),
+      EvaluatorValue::Return(r) => r.as_ref().clone(),
+    }
+  }
 }
 
 impl EvaluatorValue {
@@ -39,6 +72,8 @@ impl EvaluatorValue {
       EvaluatorValue::Double(_) => "double".to_string(),
       EvaluatorValue::Boolean(_) => "boolean".to_string(),
       EvaluatorValue::None | EvaluatorValue::Null => "null".to_string(),
+      EvaluatorValue::Callable(_) => "callable".to_string(),
+      EvaluatorValue::Return(_) => "return".to_string(),
     }
   }
 
@@ -49,6 +84,8 @@ impl EvaluatorValue {
       EvaluatorValue::Double(_) => DataType::Double,
       EvaluatorValue::Boolean(_) => DataType::Boolean,
       EvaluatorValue::None | EvaluatorValue::Null => DataType::None,
+      EvaluatorValue::Callable(callee) => callee.get_type().unwrap(),
+      EvaluatorValue::Return(r) => r.to_data_type(),
     }
   }
 }
@@ -61,6 +98,15 @@ pub enum EvaluatorResult {
 pub struct Evaluator {
   environment: Rc<RefCell<Environment>>,
   pub diagnostics: Rc<RefCell<DiagnosticList>>,
+}
+
+impl Clone for Evaluator {
+  fn clone(&self) -> Self {
+    Self {
+      environment: self.environment.clone(),
+      diagnostics: self.diagnostics.clone(),
+    }
+  }
 }
 
 impl Visitor<EvaluatorResult> for Evaluator {
@@ -98,9 +144,7 @@ impl Visitor<EvaluatorResult> for Evaluator {
         }
       }
       TokenType::Greater => match (&left, &right) {
-        (EvaluatorValue::Int(l), EvaluatorValue::Int(r)) =>  {
-         EvaluatorValue::Boolean(l > r)
-        }
+        (EvaluatorValue::Int(l), EvaluatorValue::Int(r)) => EvaluatorValue::Boolean(l > r),
         (EvaluatorValue::Double(l), EvaluatorValue::Double(r)) => EvaluatorValue::Boolean(l > r),
         _ => EvaluatorValue::None,
       },
@@ -149,13 +193,14 @@ impl Visitor<EvaluatorResult> for Evaluator {
       }
     };
 
-    if result == EvaluatorValue::None {
-      diagnostics.report_invalid_operator_for_data_type(&expression.operator, &left, &right);
+    match result {
+      EvaluatorValue::None => {
+        diagnostics.report_invalid_operator_for_data_type(&expression.operator, &left, &right);
 
-      return EvaluatorResult::Error;
+        return EvaluatorResult::Error;
+      }
+      _ => EvaluatorResult::Value(result),
     }
-
-    EvaluatorResult::Value(result)
   }
 
   fn visit_grouping_expression(&self, expression: &Grouping) -> EvaluatorResult {
@@ -226,7 +271,7 @@ impl Visitor<EvaluatorResult> for Evaluator {
     return EvaluatorResult::Error;
   }
 
-  fn visit_variable_expressin(&self, variable: &VariableExpression) -> EvaluatorResult {
+  fn visit_variable_expression(&self, variable: &VariableExpression) -> EvaluatorResult {
     let environment = self.environment.borrow_mut();
     let mut diagnostics = self.diagnostics.borrow_mut();
 
@@ -266,10 +311,7 @@ impl Visitor<EvaluatorResult> for Evaluator {
     return EvaluatorResult::Error;
   }
 
-  fn visit_logical_expression(
-    &self,
-    expression: &super::expression::logical::Logical,
-  ) -> EvaluatorResult {
+  fn visit_logical_expression(&self, expression: &Logical) -> EvaluatorResult {
     let left: EvaluatorValue = match self.evaluator(&expression.left) {
       EvaluatorResult::Value(value) => value,
       EvaluatorResult::Error => return EvaluatorResult::Error,
@@ -329,27 +371,96 @@ impl Visitor<EvaluatorResult> for Evaluator {
     EvaluatorResult::Value(EvaluatorValue::None)
   }
 
-  fn visit_ternary_expression(
-    &self,
-    expression: &Ternary,
-  ) -> EvaluatorResult {
+  fn visit_ternary_expression(&self, expression: &Ternary) -> EvaluatorResult {
     let condition: EvaluatorValue = match self.evaluator(&expression.condition) {
       EvaluatorResult::Value(value) => value,
       EvaluatorResult::Error => return EvaluatorResult::Error,
     };
-    
+
     if self.is_truthy(&condition) {
       return self.evaluator(&expression.then_branch);
     } else {
       return self.evaluator(&expression.else_branch);
     }
   }
+
+  fn visit_call_expression(&self, expression: &Call) -> EvaluatorResult {
+    let calle = match self.evaluator(&expression.callee) {
+      EvaluatorResult::Value(value) => value,
+      EvaluatorResult::Error => return EvaluatorResult::Error,
+    };
+
+    let mut arguments: Vec<EvaluatorValue> = Vec::new();
+
+    for argument in &expression.arguments {
+      match self.evaluator(argument) {
+        EvaluatorResult::Value(value) => arguments.push(value),
+        EvaluatorResult::Error => return EvaluatorResult::Error,
+      }
+    }
+
+    let function = match calle {
+      EvaluatorValue::Callable(func) => func,
+      _ => return EvaluatorResult::Error,
+    };
+
+    if arguments.len() != function.arity() {
+      let mut diagnostics = self.diagnostics.borrow_mut();
+
+      diagnostics.report_invalid_number_of_arguments(
+        function.arity(),
+        arguments.len(),
+        &expression.paren,
+      );
+
+      return EvaluatorResult::Error;
+    }
+
+    function.call(arguments.clone(), &mut Box::new(self.clone()))
+  }
+
+  fn visit_function_statement(&mut self, statement: &FunctionStatement) -> EvaluatorResult {
+    let environment = self.environment.borrow().clone();
+
+    let function = Function::new(statement.clone(), Box::new(environment));
+
+    let mut environment_mut = self.environment.borrow_mut();
+
+    environment_mut.define(
+      statement.name.span.literal.clone(),
+      VariableEnvironment::new(EvaluatorValue::Callable(Box::new(function)), false),
+    );
+
+    EvaluatorResult::Value(EvaluatorValue::None)
+  }
+
+  fn visit_return_statement(&mut self, statement: &Return) -> EvaluatorResult {
+    let mut value: Option<EvaluatorValue> = None;
+
+    if let Some(expression) = &statement.value {
+      match self.evaluator(expression) {
+        EvaluatorResult::Value(v) => value = Some(v),
+        EvaluatorResult::Error => return EvaluatorResult::Error,
+      };
+    }
+
+    match value {
+      Some(v) => EvaluatorResult::Value(v),
+      None => EvaluatorResult::Value(EvaluatorValue::None),
+    }
+  }
 }
 
 impl Evaluator {
   pub fn new() -> Self {
+    let mut environment = Environment::new(None);
+
+    let print = VariableEnvironment::new(EvaluatorValue::Callable(Box::new(Println::new())), false);
+
+    environment.define("println".to_string(), print);
+
     Self {
-      environment: Rc::new(RefCell::new(Environment::new(None))),
+      environment: Rc::new(RefCell::new(environment)),
       diagnostics: Rc::new(RefCell::new(DiagnosticList::new())),
     }
   }
@@ -397,6 +508,8 @@ impl Evaluator {
       EvaluatorValue::String(v) => !v.is_empty(),
       EvaluatorValue::Int(_) | EvaluatorValue::Double(_) => true,
       EvaluatorValue::None | EvaluatorValue::Null => false,
+      EvaluatorValue::Callable(_) => false,
+      EvaluatorValue::Return(_) => false,
     }
   }
 }

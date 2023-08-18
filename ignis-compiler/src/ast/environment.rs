@@ -14,6 +14,14 @@ pub struct VariableEnvironment {
   pub values: EvaluatorValue,
   pub is_mutable: bool,
 }
+impl Clone for VariableEnvironment {
+  fn clone(&self) -> Self {
+    Self {
+      values: self.values.clone(),
+      is_mutable: self.is_mutable,
+    }
+  }
+}
 
 impl VariableEnvironment {
   pub fn new(values: EvaluatorValue, is_mutable: bool) -> Self {
@@ -25,6 +33,15 @@ impl VariableEnvironment {
 pub struct Environment {
   pub values: HashMap<String, VariableEnvironment>,
   pub enclosing: Option<Box<Environment>>,
+}
+
+impl Clone for Environment {
+  fn clone(&self) -> Self {
+    Self {
+      values: self.values.clone(),
+      enclosing: self.enclosing.clone(),
+    }
+  }
 }
 
 impl Environment {

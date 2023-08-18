@@ -1,0 +1,5 @@
+function hi(firstName, lastName) {
+	println("Hi, " + firstName + " " + lastName + ".");
+}
+
+hi("John", "Doe");

@@ -1,6 +1,6 @@
 use super::Statement;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Block {
   pub statements: Vec<Statement>,
 }

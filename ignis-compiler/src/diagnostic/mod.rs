@@ -214,4 +214,20 @@ impl DiagnosticList {
       token.span.clone(),
     );
   }
+  
+  pub fn report_invalid_number_of_arguments(
+    &mut self,
+    expected: usize,
+    found: usize,
+    token: &Token,
+  ) {
+    self.report_error(
+      format!(
+        "Expected {} arguments, found {}",
+        expected.to_string(),
+        found.to_string()
+      ),
+      token.span.clone(),
+    );
+  }
 }

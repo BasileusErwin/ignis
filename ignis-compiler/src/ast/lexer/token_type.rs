@@ -86,6 +86,7 @@ pub enum TokenType {
   Extends,
   Implements,
   Interface,
+  Void,
 
   Bad,
   Identifier,
@@ -165,6 +166,7 @@ impl TokenType {
       TokenType::Extends => "extends".to_string(),
       TokenType::Implements => "implements".to_string(),
       TokenType::Interface => "interface".to_string(),
+      TokenType::Void => "void".to_string(),
       TokenType::Bad => "bad".to_string(),
       TokenType::Identifier => "identifier".to_string(),
       TokenType::Eof => "eof".to_string(),
@@ -249,6 +251,7 @@ impl Display for TokenType {
       TokenType::Identifier => write!(f, "identifier"),
       TokenType::Eof => write!(f, "eof"),
       TokenType::QuestionMark => write!(f, "?"),
+      TokenType::Void => write!(f, "void"),
     }
   }
 }

@@ -4,11 +4,11 @@ use super::{
   lexer::{token::Token, token_type::TokenType},
   expression::{
     Expression, binary::Binary, unary::Unary, literal::Literal, LiteralValue, grouping::Grouping,
-    logical::Logical, assign::Assign, variable::VariableExpression, self, ternary,
+    logical::Logical, assign::Assign, variable::VariableExpression, ternary, call::Call,
   },
   statement::{
     Statement, variable::Variable, expression::ExpressionStatement, if_statement::IfStatement,
-    block::Block, while_statement::WhileStatement, self,
+    block::Block, while_statement::WhileStatement, function::FunctionStatement,
   },
   data_type::DataType,
 };
@@ -19,6 +19,14 @@ pub enum ParserResult {
   Statement(Statement),
   Token(Token),
   Error,
+}
+
+#[derive(Debug)]
+pub enum FunctionKind {
+  Function,
+  Method,
+  Initializer,
+  Lambda,
 }
 
 pub struct Parser {
@@ -170,7 +178,7 @@ impl Parser {
     ParserResult::Expression(expression)
   }
 
-  // unary -> ("!" | "-") unary | primary;
+  // unary -> ("!" | "-") unary | call;
   fn unary(&mut self) -> ParserResult {
     if self.match_token(&[TokenType::Bang, TokenType::Minus]) {
       let operator = self.previous();
@@ -189,7 +197,27 @@ impl Parser {
       )));
     }
 
-    self.primary()
+    self.call()
+  }
+
+  fn call(&mut self) -> ParserResult {
+    let mut expression: Expression = match self.primary() {
+      ParserResult::Expression(e) => e,
+      _ => return ParserResult::Error,
+    };
+
+    loop {
+      if self.match_token(&[TokenType::LeftParen]) {
+        expression = match self.finish_call(expression) {
+          ParserResult::Expression(e) => e,
+          _ => return ParserResult::Error,
+        };
+      } else {
+        break;
+      }
+    }
+
+    ParserResult::Expression(expression)
   }
 
   fn primary(&mut self) -> ParserResult {
@@ -242,6 +270,43 @@ impl Parser {
     }
   }
 
+  fn finish_call(&mut self, callee: Expression) -> ParserResult {
+    let mut arguments: Vec<Expression> = Vec::new();
+
+    if !self.check(TokenType::RightParen) {
+      loop {
+        if arguments.len() >= 255 {
+          let token = &self.peek();
+
+          self
+            .diagnostics
+            .report_invalid_number_of_arguments(255, arguments.len(), token);
+        }
+
+        arguments.push(match self.expression() {
+          ParserResult::Expression(e) => e,
+          _ => return ParserResult::Error,
+        });
+
+        if !self.match_token(&[TokenType::Comma]) {
+          break;
+        }
+      }
+    }
+
+    let token = match self.consume(TokenType::RightParen) {
+      ParserResult::Token(t) => t,
+      _ => return ParserResult::Error,
+    };
+
+    ParserResult::Expression(Expression::Call(Call::new(
+      Box::new(callee),
+      token,
+      arguments,
+      DataType::Pending,
+    )))
+  }
+
   fn get_data_type_by_operator(
     &mut self,
     left: Option<DataType>,
@@ -284,6 +349,7 @@ impl Parser {
       Expression::Assign(assign) => assign.data_type.clone(),
       Expression::Logical(logical) => logical.data_type.clone(),
       Expression::Ternary(ternary) => ternary.data_type.clone(),
+      Expression::Call(call) => call.return_type.clone(),
     }
   }
 
@@ -315,6 +381,14 @@ impl Parser {
       return self.variable_declaration();
     }
 
+    if self.match_token(&[TokenType::Function]) {
+      return self.function(FunctionKind::Function);
+    }
+
+    if self.match_token(&[TokenType::Return]) {
+      // return self.return_statement();
+    }
+
     if self.match_token(&[TokenType::While]) {
       return self.while_statement();
     }
@@ -325,6 +399,68 @@ impl Parser {
         self.synchronize();
         ParserResult::Error
       }
+    }
+  }
+
+  fn function(&mut self, kind: FunctionKind) -> ParserResult {
+    match kind {
+      FunctionKind::Function => {
+        let name: Token = match self.consume(TokenType::Identifier) {
+          ParserResult::Token(t) => t,
+          _ => return ParserResult::Error,
+        };
+
+        match self.consume(TokenType::LeftParen) {
+          ParserResult::Token(_) => (),
+          _ => return ParserResult::Error,
+        }
+
+        let mut parameters: Vec<Token> = Vec::new();
+
+        if !self.check(TokenType::RightParen) {
+          loop {
+            if parameters.len() >= 255 {
+              // TODO: report error
+            }
+
+            let param = match self.consume(TokenType::Identifier) {
+              ParserResult::Token(t) => t,
+              _ => return ParserResult::Error,
+            };
+
+            parameters.push(param);
+
+            if !self.match_token(&[TokenType::Comma]) {
+              break;
+            }
+          }
+        }
+
+        match self.consume(TokenType::RightParen) {
+          ParserResult::Token(_) => (),
+          _ => return ParserResult::Error,
+        };
+
+        match self.consume(TokenType::LeftBrace) {
+          ParserResult::Token(_) => (),
+          _ => return ParserResult::Error,
+        };
+
+        let body: Vec<Statement> = match self.block() {
+          ParserResult::Statement(s) => match s {
+            Statement::Block(b) => b.statements,
+            _ => return ParserResult::Error,
+          },
+          _ => return ParserResult::Error,
+        };
+
+        ParserResult::Statement(Statement::FunctionStatement(FunctionStatement::new(
+          name, parameters, body, None,
+        )))
+      }
+      FunctionKind::Method => todo!(),
+      FunctionKind::Initializer => todo!(),
+      FunctionKind::Lambda => todo!(),
     }
   }
 

@@ -1,3 +1,4 @@
+pub mod callable;
 pub mod data_type;
 pub mod environment;
 pub mod evaluator;
@@ -9,11 +10,7 @@ pub mod visitor;
 
 use crate::ast::evaluator::EvaluatorValue;
 
-use self::{
-  statement::Statement,
-  visitor::Visitor,
-  evaluator::EvaluatorResult,
-};
+use self::{statement::Statement, visitor::Visitor, evaluator::EvaluatorResult};
 
 #[derive(Debug)]
 pub struct Ast {
@@ -66,15 +63,19 @@ impl Ast {
             EvaluatorResult::Value(v) => value = v,
           };
         }
+        Statement::FunctionStatement(f) => {
+          match visitor.visit_function_statement(f) {
+            EvaluatorResult::Error => return (),
+            EvaluatorResult::Value(v) => value = v,
+          };
+        }
+        Statement::Return(r) => {
+          match visitor.visit_return_statement(r) {
+            EvaluatorResult::Error => return (),
+            EvaluatorResult::Value(v) => value = v,
+          };
+        }
       };
-      
-      match value {
-        EvaluatorValue::Int(v) => println!("{}", v),
-        EvaluatorValue::Double(v) => println!("{}", v),
-        EvaluatorValue::Boolean(v) => println!("{}", v),
-        EvaluatorValue::String(v) => println!("{}", v),
-        _ => (),
-      }
     }
   }
 }

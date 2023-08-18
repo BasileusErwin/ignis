@@ -1,4 +1,9 @@
 function main() {
 	let helloWorld: string = "Hello World";
 	let num: int = 10 + 3;
+	
+	println(helloWorld);
+	println(num);
 }
+
+main();

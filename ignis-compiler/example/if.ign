@@ -1,13 +1,8 @@
-let num: int = 1;
+let num: int = 5;
+let result: int = 12 * num;
 
-if (true) {
-	let num2: int = 2;
-
-	num + num2;
-}
-
-if (true) {
- 	let num2: int = 3;
-
-	num + num2;
+if (num < result) {
+	println(result);	
+} else {
+	println(num);
 }
