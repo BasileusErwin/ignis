@@ -1,4 +1,4 @@
-function hi(firstName, lastName) {
+function hi(firstName, lastName): void {
 	println("Hi, " + firstName + " " + lastName + ".");
 }
 

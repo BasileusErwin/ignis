@@ -339,10 +339,12 @@ impl Visitor<EvaluatorResult> for Evaluator {
       EvaluatorResult::Value(value) => value,
       EvaluatorResult::Error => return EvaluatorResult::Error,
     };
+    
 
     if self.is_truthy(&condition) {
       self.execute(statement.then_branch.as_ref());
     } else if let Some(else_branch) = &statement.else_branch {
+      println!("{:?}", else_branch);
       self.execute(else_branch.as_ref());
     }
 
@@ -376,7 +378,7 @@ impl Visitor<EvaluatorResult> for Evaluator {
       EvaluatorResult::Value(value) => value,
       EvaluatorResult::Error => return EvaluatorResult::Error,
     };
-
+    
     if self.is_truthy(&condition) {
       return self.evaluator(&expression.then_branch);
     } else {

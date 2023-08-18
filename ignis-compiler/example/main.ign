@@ -1,4 +1,4 @@
-function main() {
+function main(): void {
 	let helloWorld: string = "Hello World";
 	let num: int = 10 + 3;
 	

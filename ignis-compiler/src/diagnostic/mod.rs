@@ -230,4 +230,14 @@ impl DiagnosticList {
       token.span.clone(),
     );
   }
+  
+  pub fn report_expected_return_type_after_function(
+    &mut self,
+    token: &Token,
+  ) {
+    self.report_error(
+      format!("Expected return type after function, found '{}'", token.kind.to_string()),
+      token.span.clone(),
+    );
+  }
 }

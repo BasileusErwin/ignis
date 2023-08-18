@@ -1,3 +1,5 @@
 let num: int = 12; 
 
-num != 12 ? "True" : "False";
+let result: string = num == 12 ? "True" : "False";
+
+println(result);

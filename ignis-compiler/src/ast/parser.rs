@@ -8,7 +8,7 @@ use super::{
   },
   statement::{
     Statement, variable::Variable, expression::ExpressionStatement, if_statement::IfStatement,
-    block::Block, while_statement::WhileStatement, function::FunctionStatement,
+    block::Block, while_statement::WhileStatement, function::FunctionStatement, return_statement,
   },
   data_type::DataType,
 };
@@ -441,6 +441,31 @@ impl Parser {
           _ => return ParserResult::Error,
         };
 
+        match self.consume(TokenType::Colon) {
+          ParserResult::Token(_) => (),
+          _ => return ParserResult::Error,
+        };
+
+        let mut return_type: Option<DataType> = None;
+        if self.match_token(&[
+          TokenType::Void,
+          TokenType::Int,
+          TokenType::Double,
+          TokenType::String,
+          TokenType::BooleanType,
+          TokenType::Char,
+        ]) {
+          return_type = Some(DataType::from_token_type(self.peek().kind));
+        } else {
+          let token = &self.peek();
+
+          self
+            .diagnostics
+            .report_expected_return_type_after_function(token);
+
+          return ParserResult::Error;
+        }
+
         match self.consume(TokenType::LeftBrace) {
           ParserResult::Token(_) => (),
           _ => return ParserResult::Error,
@@ -455,7 +480,10 @@ impl Parser {
         };
 
         ParserResult::Statement(Statement::FunctionStatement(FunctionStatement::new(
-          name, parameters, body, None,
+          name,
+          parameters,
+          body,
+          return_type,
         )))
       }
       FunctionKind::Method => todo!(),
@@ -628,8 +656,8 @@ impl Parser {
       return ParserResult::Expression(children.pop().unwrap());
     }
 
-    let then_branch = children.pop().unwrap();
     let else_branch = children.pop().unwrap();
+    let then_branch = children.pop().unwrap();
     let condition = children.pop().unwrap();
 
     let mut expression: Expression = Expression::Ternary(ternary::Ternary::new(
