@@ -62,7 +62,6 @@ fn run(source: String, evaluator: &mut Evaluator, relp: bool) -> Result<(), ()> 
 
   ast.visit(&mut diagnostics, evaluator);
 
-
   if diagnostics.diagnostics.len() > 0 {
     display_diagnostic(&diagnostics, relp);
   }

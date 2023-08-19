@@ -68,12 +68,12 @@ impl<'a> Lexer<'a> {
     if c == ' ' || c == '\r' || c == '\t' {
       return;
     }
-    
+
     if c == '\n' {
       self.line += 1;
       return;
     }
-    
+
     match c {
       '(' => {
         token = TokenType::LeftParen;
@@ -362,7 +362,7 @@ impl<'a> Lexer<'a> {
   */
   fn add_token(&mut self, kind: TokenType) {
     let literal = self.source[self.start..self.current].to_string();
-    
+
     if kind == TokenType::Comment {
       return;
     }

@@ -31,7 +31,7 @@ pub enum DiagnosticError {
   InvalidOperator(Token),
   InvalidUnaryOperator(Token),
   UndefinedVariable(Token),
-VariableAlreadyDefined(String, DataType),
+  VariableAlreadyDefined(String, DataType),
 }
 
 impl DiagnosticError {
@@ -94,9 +94,9 @@ impl DiagnosticError {
       DiagnosticError::UndefinedVariable(token) => {
         diagnostics.report_undefined_variable(&token);
       }
-			DiagnosticError::VariableAlreadyDefined(name, data_type) => {
-				diagnostics.report_variable_already_defined(name, data_type);
-			}
+      DiagnosticError::VariableAlreadyDefined(name, data_type) => {
+        diagnostics.report_variable_already_defined(name, data_type);
+      }
     }
   }
 }
