@@ -7,6 +7,7 @@ pub mod lexer;
 pub mod parser;
 pub mod statement;
 pub mod visitor;
+pub mod execution_error;
 
 use std::{vec, rc::Rc, cell::RefCell};
 

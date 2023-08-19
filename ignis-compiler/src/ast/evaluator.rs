@@ -16,6 +16,7 @@ use super::{
   environment::{Environment, VariableEnvironment},
   data_type::DataType,
   callable::{Callable, function::Function, print::Println},
+  execution_error::ExecutionError,
 };
 
 #[derive(Debug)]
@@ -77,7 +78,7 @@ impl EvaluatorValue {
   }
 }
 
-pub type EvaluatorResult<T> = Result<T, DiagnosticError>;
+pub type EvaluatorResult<T> = Result<T, ExecutionError>;
 
 pub struct Evaluator {
   environment: Rc<RefCell<Environment>>,
@@ -145,18 +146,20 @@ impl Visitor<EvaluatorResult<EvaluatorValue>> for Evaluator {
         _ => EvaluatorValue::None,
       },
       _ => {
-        return Err(DiagnosticError::InvalidOperator(
-          expression.operator.clone(),
+        return Err(ExecutionError::DiagnosticError(
+          DiagnosticError::InvalidOperator(expression.operator.clone()),
         ))
       }
     };
 
     match result {
       EvaluatorValue::None => {
-        return Err(DiagnosticError::InvalidComparison(
-          left.clone(),
-          right.clone(),
-          expression.operator.clone(),
+        return Err(ExecutionError::DiagnosticError(
+          DiagnosticError::InvalidComparison(
+            left.clone(),
+            right.clone(),
+            expression.operator.clone(),
+          ),
         ))
       }
       _ => Ok(result),
@@ -186,17 +189,19 @@ impl Visitor<EvaluatorResult<EvaluatorValue>> for Evaluator {
         EvaluatorValue::Double(r) => return Ok(EvaluatorValue::Double(-r)),
         EvaluatorValue::Int(r) => return Ok(EvaluatorValue::Int(-r)),
         _ => {
-          return Err(DiagnosticError::InvalidUnaryOperatorForDataType(
-            expression.operator.clone(),
-            right.clone(),
+          return Err(ExecutionError::DiagnosticError(
+            DiagnosticError::InvalidUnaryOperatorForDataType(
+              expression.operator.clone(),
+              right.clone(),
+            ),
           ))
         }
       },
       _ => (),
     };
 
-    Err(DiagnosticError::InvalidUnaryOperator(
-      expression.operator.clone(),
+    Err(ExecutionError::DiagnosticError(
+      DiagnosticError::InvalidUnaryOperator(expression.operator.clone()),
     ))
   }
 
@@ -221,7 +226,7 @@ impl Visitor<EvaluatorResult<EvaluatorValue>> for Evaluator {
       VariableEnvironment::new(value.clone(), variable.is_mutable),
     ) {
       Ok(_) => Ok(value),
-      Err(error) => Err(error),
+      Err(error) => Err(ExecutionError::DiagnosticError(error)),
     }
   }
 
@@ -237,10 +242,12 @@ impl Visitor<EvaluatorResult<EvaluatorValue>> for Evaluator {
           return Ok(e.values.clone());
         }
       }
-      Err(error) => return Err(error),
+      Err(error) => return Err(ExecutionError::DiagnosticError(error)),
     }
 
-    Err(DiagnosticError::UndeclaredVariable(variable.clone()))
+    Err(ExecutionError::DiagnosticError(
+      DiagnosticError::UndeclaredVariable(variable.clone()),
+    ))
   }
 
   // TODO: Validate if a variable is being declared for the first time without using the let or const keyword
@@ -256,7 +263,7 @@ impl Visitor<EvaluatorResult<EvaluatorValue>> for Evaluator {
       &mut diagnostics,
     ) {
       Ok(_) => Ok(value),
-      Err(error) => Err(error),
+      Err(error) => Err(ExecutionError::DiagnosticError(error)),
     }
   }
 
@@ -330,18 +337,30 @@ impl Visitor<EvaluatorResult<EvaluatorValue>> for Evaluator {
 
     let function = match calle {
       EvaluatorValue::Callable(func) => func,
-      _ => return Err(DiagnosticError::NotCallable(expression.paren.clone())),
+      _ => {
+        return Err(ExecutionError::DiagnosticError(
+          DiagnosticError::NotCallable(expression.paren.clone()),
+        ))
+      }
     };
 
     if arguments.len() != function.arity() {
-      return Err(DiagnosticError::InvalidNumberOfArguments(
-        function.arity(),
-        arguments.len(),
-        expression.paren.clone(),
+      return Err(ExecutionError::DiagnosticError(
+        DiagnosticError::InvalidNumberOfArguments(
+          function.arity(),
+          arguments.len(),
+          expression.paren.clone(),
+        ),
       ));
     }
 
-    function.call(arguments.clone(), &mut Box::new(self.clone()))
+    match function.call(arguments.clone(), &mut Box::new(self.clone())) {
+      Ok(value) => Ok(value),
+      Err(error) => match error {
+        ExecutionError::Return(value) => Ok(value),
+        _ => Err(error), 
+      }
+    }
   }
 
   fn visit_function_statement(
@@ -370,8 +389,8 @@ impl Visitor<EvaluatorResult<EvaluatorValue>> for Evaluator {
     }
 
     match value {
-      Some(v) => Ok(EvaluatorValue::Return(Box::new(v))),
-      None => Ok(EvaluatorValue::Null),
+      Some(v) => Err(ExecutionError::Return(v)),
+      None => Err(ExecutionError::Return(EvaluatorValue::Null)),
     }
   }
 }
@@ -410,12 +429,6 @@ impl Evaluator {
     for statement in statement {
       let result = self.execute(statement)?;
 
-      // TODO: Refactor EvaluatorResult to introduce ExecutionError for handling early returns and other execution control flow scenarios.
-      // Steps to consider:
-      // 1. Introduce an ExecutionError enum that can encapsulate various control flow scenarios (like Return, Break, Continue).
-      // 2. Modify EvaluatorResult to be a Result type with EvaluatorValue as the "Ok" type and ExecutionError as the "Err" type.
-      // 3. Refactor the Evaluator to handle these new error types, especially when a Return error is encountered to halt execution.
-      // 4. Update error handling throughout the application to ensure a smooth transition to this new model and ensure other errors are still properly caught and handled.
       if let EvaluatorValue::Return(_) = result {
         self.environment = previous;
         return Ok(result);
@@ -441,10 +454,8 @@ impl Evaluator {
       (EvaluatorValue::String(l), EvaluatorValue::String(r)) => l == r,
       (EvaluatorValue::None, EvaluatorValue::None) => true,
       _ => {
-        return Err(DiagnosticError::InvalidComparison(
-          left.clone(),
-          right.clone(),
-          token.clone(),
+        return Err(ExecutionError::DiagnosticError(
+          DiagnosticError::InvalidComparison(left.clone(), right.clone(), token.clone()),
         ))
       }
     };

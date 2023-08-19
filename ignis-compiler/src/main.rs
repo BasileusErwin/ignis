@@ -8,13 +8,7 @@ use std::{
   fs,
 };
 
-use ast::{
-  parser::Parser,
-  lexer::Lexer,
-  evaluator::Evaluator,
-  Ast,
-  statement::{self, Statement},
-};
+use ast::{parser::Parser, lexer::Lexer, evaluator::Evaluator, Ast};
 use diagnostic::DiagnosticList;
 
 fn display_diagnostic(diagnostics: &DiagnosticList, relp: bool) {
@@ -123,7 +117,7 @@ fn main() {
   let args: Vec<String> = env::args().collect();
 
   if args.len() == 2 {
-    run_file(&args[1]);
+    let _ = run_file(&args[1]);
   } else {
     match run_prompt() {
       Ok(_) => exit(0),

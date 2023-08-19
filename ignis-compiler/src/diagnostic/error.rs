@@ -18,6 +18,7 @@ pub enum DiagnosticError {
   ExpectedExpressionAfter(Token),
   UnexpectedToken(TokenType, Token),
   InvalidAssignmentTarget(TextSpan),
+  ExpectedTypeAfterVariable(Token),
 
   // Evaluator | Analizer
   UndeclaredVariable(VariableExpression),
@@ -96,6 +97,9 @@ impl DiagnosticError {
       }
       DiagnosticError::VariableAlreadyDefined(name, data_type) => {
         diagnostics.report_variable_already_defined(name, data_type);
+      }
+      DiagnosticError::ExpectedTypeAfterVariable(token) => {
+        diagnostics.report_expected_type_after_variable(&token);
       }
     }
   }

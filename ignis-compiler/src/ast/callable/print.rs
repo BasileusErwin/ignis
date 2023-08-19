@@ -1,9 +1,8 @@
 use crate::{
   ast::{
-    expression::Expression,
-    statement::function::FunctionStatement,
     evaluator::{Evaluator, EvaluatorResult, EvaluatorValue},
     data_type::DataType,
+    execution_error::ExecutionError,
   },
   diagnostic::error::DiagnosticError,
 };
@@ -27,7 +26,7 @@ impl Callable for Println {
   fn call(
     &self,
     arguments: Vec<EvaluatorValue>,
-    evaluator: &mut Box<Evaluator>,
+    _evaluator: &mut Box<Evaluator>,
   ) -> EvaluatorResult<EvaluatorValue> {
     let mut value: String = String::new();
 
@@ -40,7 +39,9 @@ impl Callable for Println {
         EvaluatorValue::Return(r) => value = r.to_string(),
         EvaluatorValue::Null => value = "null".to_string(),
         EvaluatorValue::Callable(_) | EvaluatorValue::None => {
-          return Err(DiagnosticError::InvalidArgumentType(argument))
+          return Err(ExecutionError::DiagnosticError(
+            DiagnosticError::InvalidArgumentType(argument),
+          ))
         }
       };
     }

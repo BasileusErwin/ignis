@@ -362,8 +362,10 @@ impl Parser {
     let keyword = self.previous();
 
     if self.check(TokenType::SemiColon) {
+      self.advance();
       return Ok(Statement::Return(Return::new(None, Box::new(keyword))));
     }
+
     let value = self.expression()?;
 
     self.consume(TokenType::SemiColon)?;
@@ -475,7 +477,7 @@ impl Parser {
     let type_annotation = DataType::from_token_type(token.kind.clone());
 
     if type_annotation == DataType::None {
-      return Err(DiagnosticError::ExpectedReturnTypeAfterFunction(token));
+      return Err(DiagnosticError::ExpectedTypeAfterVariable(token));
     }
 
     self.advance();

@@ -1,7 +1,7 @@
 pub mod function;
 pub mod print;
 
-use std::{fmt::Debug, cell::RefCell, rc::Rc};
+use std::fmt::Debug;
 
 use super::{
   data_type::DataType,

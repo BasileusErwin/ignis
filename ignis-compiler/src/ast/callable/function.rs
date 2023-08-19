@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc, env::args_os};
+use std::{cell::RefCell, rc::Rc};
 
 use crate::{
   ast::{
@@ -6,6 +6,7 @@ use crate::{
     evaluator::{Evaluator, EvaluatorValue, EvaluatorResult},
     statement::function::FunctionStatement,
     environment::Environment,
+    execution_error::ExecutionError,
   },
   diagnostic::error::DiagnosticError,
 };
@@ -48,10 +49,12 @@ impl Callable for Function {
       match arguments.get(i) {
         Some(argument) => {
           if argument.to_data_type() != parameter.data_type {
-            return Err(DiagnosticError::AssingInvalidType(
-              argument.to_data_type(),
-              parameter.data_type.clone(),
-              parameter.name.clone(),
+            return Err(ExecutionError::DiagnosticError(
+              DiagnosticError::AssingInvalidType(
+                argument.to_data_type(),
+                parameter.data_type.clone(),
+                parameter.name.clone(),
+              ),
             ));
           }
 
@@ -61,10 +64,12 @@ impl Callable for Function {
           );
         }
         None => {
-          return Err(DiagnosticError::MissingArgument(
-            parameter.name.span.literal.clone(),
-            parameter.name.clone(),
-          ))
+          return Err(ExecutionError::DiagnosticError(
+            DiagnosticError::MissingArgument(
+              parameter.name.span.literal.clone(),
+              parameter.name.clone(),
+            ),
+          ));
         }
       };
     }
@@ -72,18 +77,20 @@ impl Callable for Function {
     match evaluator.execute_block(&self.declaration.body, Rc::new(RefCell::new(environment)))? {
       EvaluatorValue::Return(value) => {
         if let Some(kind) = self.declaration.return_type.clone() {
-            if value.to_data_type() != kind {
-              return Err(DiagnosticError::AssingInvalidType(
+          if value.to_data_type() != kind {
+            return Err(ExecutionError::DiagnosticError(
+              DiagnosticError::AssingInvalidType(
                 value.to_data_type(),
                 kind,
                 self.declaration.name.clone(),
-              ));
-            }
+              ),
+            ));
+          }
         }
-        
-        Ok(EvaluatorValue::Return(value))
+
+        Err(ExecutionError::Return(*value))
       }
-      _ => Ok(EvaluatorValue::Return(Box::new(EvaluatorValue::Null))),
+      _ => Err(ExecutionError::Return(EvaluatorValue::Null)),
     }
   }
 
