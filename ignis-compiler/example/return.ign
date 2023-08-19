@@ -1,4 +1,4 @@
-function sum(num1: int, num2: int): string {
+function sum(num1: int, num2: int): int {
 	let result: int = num1 + num2;
 
 	return result;

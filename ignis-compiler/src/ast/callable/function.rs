@@ -70,7 +70,19 @@ impl Callable for Function {
     }
 
     match evaluator.execute_block(&self.declaration.body, Rc::new(RefCell::new(environment)))? {
-      EvaluatorValue::Return(value) => Ok(EvaluatorValue::Return(value)),
+      EvaluatorValue::Return(value) => {
+        if let Some(kind) = self.declaration.return_type.clone() {
+            if value.to_data_type() != kind {
+              return Err(DiagnosticError::AssingInvalidType(
+                value.to_data_type(),
+                kind,
+                self.declaration.name.clone(),
+              ));
+            }
+        }
+        
+        Ok(EvaluatorValue::Return(value))
+      }
       _ => Ok(EvaluatorValue::Return(Box::new(EvaluatorValue::Null))),
     }
   }
