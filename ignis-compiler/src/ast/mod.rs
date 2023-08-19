@@ -8,74 +8,39 @@ pub mod parser;
 pub mod statement;
 pub mod visitor;
 
-use crate::ast::evaluator::EvaluatorValue;
+use std::{vec, rc::Rc, cell::RefCell};
+
+use crate::{
+  ast::evaluator::EvaluatorValue,
+  diagnostic::{DiagnosticList, self, error::DiagnosticError},
+};
 
 use self::{statement::Statement, visitor::Visitor, evaluator::EvaluatorResult};
 
 #[derive(Debug)]
 pub struct Ast {
-  pub statementes: Vec<Statement>,
+  pub statements: Vec<Statement>,
 }
 
 impl Ast {
-  pub fn new() -> Self {
-    Self {
-      statementes: Vec::new(),
-    }
+  pub fn new(statements: Vec<Statement>) -> Self {
+    Self { statements }
   }
 
   pub fn add(&mut self, statement: Statement) {
-    self.statementes.push(statement);
+    self.statements.push(statement);
   }
 
-  pub fn visit(&mut self, visitor: &mut dyn Visitor<EvaluatorResult>) {
-    for statement in &self.statementes {
-      let mut value: EvaluatorValue = EvaluatorValue::None;
-
-      match statement {
-        Statement::Expression(expression) => {
-          match visitor.visit_expression_statement(expression) {
-            EvaluatorResult::Error => return (),
-            EvaluatorResult::Value(v) => value = v,
-          };
-        }
-        Statement::Block(block) => match visitor.visit_block(block) {
-          EvaluatorResult::Error => return (),
-          EvaluatorResult::Value(s) => {
-            value = s;
-          }
-        },
-        Statement::Variable(variable) => {
-          match visitor.visit_variable_statement(variable) {
-            EvaluatorResult::Error => return (),
-            EvaluatorResult::Value(v) => value = v,
-          };
-        }
-        Statement::IfStatement(if_statement) => {
-          match visitor.visit_if_statement(if_statement) {
-            EvaluatorResult::Error => return (),
-            EvaluatorResult::Value(v) => value = v,
-          };
-        }
-        Statement::WhileStatement(while_statement) => {
-          match visitor.visit_while_statement(while_statement) {
-            EvaluatorResult::Error => return (),
-            EvaluatorResult::Value(v) => value = v,
-          };
-        }
-        Statement::FunctionStatement(f) => {
-          match visitor.visit_function_statement(f) {
-            EvaluatorResult::Error => return (),
-            EvaluatorResult::Value(v) => value = v,
-          };
-        }
-        Statement::Return(r) => {
-          match visitor.visit_return_statement(r) {
-            EvaluatorResult::Error => return (),
-            EvaluatorResult::Value(v) => value = v,
-          };
-        }
-      };
+  pub fn visit(
+    &mut self,
+    diagnostics: &mut DiagnosticList,
+    visitor: &mut dyn Visitor<EvaluatorResult<EvaluatorValue>>,
+  ) {
+    for statement in &self.statements {
+      match statement.accept(visitor) {
+        Ok(_) => continue,
+        Err(error) => error.report(diagnostics),
+      }
     }
   }
 }

@@ -1,19 +1,17 @@
-use std::{collections::HashMap, rc::Rc, cell::RefCell};
+use std::collections::HashMap;
 
-use crate::diagnostic::DiagnosticList;
+use crate::diagnostic::{DiagnosticList, error::DiagnosticError};
 
 use super::{evaluator::EvaluatorValue, lexer::token::Token};
 
-pub enum EnvironmentResult<T> {
-  Suscess(T),
-  Error,
-}
+type EnvironmentResult<T> = Result<T, DiagnosticError>;
 
 #[derive(Debug)]
 pub struct VariableEnvironment {
   pub values: EvaluatorValue,
   pub is_mutable: bool,
 }
+
 impl Clone for VariableEnvironment {
   fn clone(&self) -> Self {
     Self {
@@ -54,24 +52,29 @@ impl Environment {
 
   pub fn get(&self, name: Token) -> EnvironmentResult<Option<&VariableEnvironment>> {
     if self.values.contains_key(name.span.literal.as_str()) {
-      return EnvironmentResult::Suscess(self.values.get(name.span.literal.as_str()));
+      return Ok(self.values.get(name.span.literal.as_str()));
     }
 
     if let Some(enclosing) = &self.enclosing {
       return enclosing.get(name);
     }
 
-    EnvironmentResult::Error
+    Err(DiagnosticError::UndefinedVariable(name))
   }
 
   pub fn define(&mut self, name: String, value: VariableEnvironment) -> EnvironmentResult<()> {
-    if self.values.contains_key(name.as_str()) {
-      return EnvironmentResult::Error;
+    let name_string = name.clone();
+    let name_str = name.as_str();
+    if self.values.contains_key(name_str) {
+      return Err(DiagnosticError::VariableAlreadyDefined(
+        name_string,
+        self.values.get(name_str).unwrap().values.to_data_type(),
+      ));
     }
 
     self.values.insert(name, value);
 
-    EnvironmentResult::Suscess(())
+    Ok(())
   }
 
   pub fn assign(
@@ -83,8 +86,7 @@ impl Environment {
     if self.values.contains_key(name.span.literal.as_str()) {
       if let Some(env) = self.values.get(name.span.literal.as_str()) {
         if !env.is_mutable {
-          diagnostics.report_invalid_reassigned_variable(&name);
-          return EnvironmentResult::Error;
+          return Err(DiagnosticError::InvalidAssignmentTarget(name.span.clone()));
         }
 
         match (&value, env) {
@@ -129,25 +131,24 @@ impl Environment {
             },
           ) => (),
           _ => {
-            diagnostics.report_assing_invalid_type(
-              &value.values.to_data_type(),
-              &env.values.to_data_type(),
-              &name,
-            );
-
-            return EnvironmentResult::Error;
+            return Err(DiagnosticError::AssingInvalidType(
+              value.values.to_data_type(),
+              env.values.to_data_type(),
+              name.clone(),
+            ))
           }
         }
       }
 
       self.values.insert(name.span.literal.clone(), value);
-      return EnvironmentResult::Suscess(());
+
+      return Ok(());
     }
 
     if let Some(enclosing) = &mut self.enclosing {
       return enclosing.assign(name, value, diagnostics);
     }
 
-    EnvironmentResult::Error
+    Err(DiagnosticError::UndefinedVariable(name.clone()))
   }
 }

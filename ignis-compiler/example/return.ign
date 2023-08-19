@@ -1,0 +1,7 @@
+function sum(num1: int, num2: int): string {
+	let result: int = num1 + num2;
+
+	return result;
+}
+
+println(sum(2, 2)); // 4

@@ -173,6 +173,7 @@ impl<'a> Lexer<'a> {
         token = TokenType::QuestionMark;
       }
       '/' => {
+        token = TokenType::Comment;
         if self.match_char('*') {
           while !self.is_at_end() {
             if self.match_char('*') && self.match_char('/') {
@@ -361,6 +362,10 @@ impl<'a> Lexer<'a> {
   */
   fn add_token(&mut self, kind: TokenType) {
     let literal = self.source[self.start..self.current].to_string();
+    
+    if kind == TokenType::Comment {
+      return;
+    }
 
     self.tokens.push(Token::new(
       kind,

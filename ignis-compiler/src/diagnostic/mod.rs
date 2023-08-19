@@ -1,10 +1,12 @@
+pub mod error;
+
 use std::fmt::Display;
 
 use crate::ast::{
   lexer::{text_span::TextSpan, token_type::TokenType, token::Token},
   data_type::DataType,
   evaluator::EvaluatorValue,
-  expression::Expression,
+  expression::{Expression, variable::VariableExpression},
 };
 
 #[derive(Debug)]
@@ -94,10 +96,10 @@ impl DiagnosticList {
     );
   }
 
-  pub fn report_undeclared_variable(&mut self, token: &Token) {
+  pub fn report_undeclared_variable(&mut self, expression: &VariableExpression) {
     self.report_error(
-      format!("Undeclared variable '{}'", token.span.literal),
-      token.span.clone(),
+      format!("Undeclared variable '{}'", expression.name.span.literal),
+      expression.name.span.clone(),
     );
   }
 
@@ -207,18 +209,22 @@ impl DiagnosticList {
       token.span.clone(),
     );
   }
-  
+
   pub fn report_expected_token(&mut self, expected: &TokenType, token: &Token) {
     self.report_error(
-      format!("Expected '{}', found '{}'", expected.to_string(), token.kind.to_string()),
+      format!(
+        "Expected '{}', found '{}'",
+        expected.to_string(),
+        token.kind.to_string()
+      ),
       token.span.clone(),
     );
   }
-  
+
   pub fn report_invalid_number_of_arguments(
     &mut self,
-    expected: usize,
-    found: usize,
+    expected: &usize,
+    found: &usize,
     token: &Token,
   ) {
     self.report_error(
@@ -230,14 +236,73 @@ impl DiagnosticList {
       token.span.clone(),
     );
   }
-  
-  pub fn report_expected_return_type_after_function(
+
+  pub fn report_expected_return_type_after_function(&mut self, token: &Token) {
+    self.report_error(
+      format!(
+        "Expected return type after function, found '{}'",
+        token.kind.to_string()
+      ),
+      token.span.clone(),
+    );
+  }
+
+  fn report_not_callable(&mut self, expression: &Token) {
+    self.report_error(
+      format!("'{}' is not callable", expression.span.literal),
+      expression.span.clone(),
+    );
+  }
+
+  pub fn report_missing_argument(&mut self, name: &str, token: &Token) {
+    self.report_error(format!("Missing argument '{}'", name), token.span.clone());
+  }
+
+  fn report_invalid_argument_type(&mut self, argument: &EvaluatorValue) {
+    self.report_error(
+      format!("Invalid argument type '{}'", argument.to_string()),
+      TextSpan::new(0, 0, 0, argument.to_string()),
+    );
+  }
+
+  fn report_invalid_comparison(
     &mut self,
-    token: &Token,
+    left: &&EvaluatorValue,
+    right: &&EvaluatorValue,
+    token: &&Token,
   ) {
     self.report_error(
-      format!("Expected return type after function, found '{}'", token.kind.to_string()),
+      format!(
+        "Invalid comparison between '{}' and '{}'",
+        left.to_string(),
+        right.to_string()
+      ),
       token.span.clone(),
+    )
+  }
+
+  fn report_invalid_unary_operator(&mut self, token: &&Token) {
+    self.report_error(
+      format!("Invalid unary operator '{}'", token.span.literal),
+      token.span.clone(),
+    );
+  }
+
+  fn report_undefined_variable(&mut self, token: &Token) {
+    self.report_error(
+      format!("Undefined variable '{}'", token.span.literal),
+      token.span.clone(),
+    );
+  }
+
+  fn report_variable_already_defined(&mut self, name: &str, data_type: &DataType) {
+    self.report_error(
+      format!(
+        "Variable '{}' was already defined as '{}'",
+        name,
+        data_type.to_string()
+      ),
+      TextSpan::new(0, 0, 0, name.to_string()),
     );
   }
 }

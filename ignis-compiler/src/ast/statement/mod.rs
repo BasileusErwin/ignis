@@ -35,7 +35,7 @@ impl Statement {
       Statement::FunctionStatement(function_statement) => {
         visitor.visit_function_statement(function_statement)
       }
-        Statement::Return(r) => visitor.visit_return_statement(r),
+      Statement::Return(r) => visitor.visit_return_statement(r),
     }
   }
 }

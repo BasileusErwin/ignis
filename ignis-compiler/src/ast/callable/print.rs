@@ -1,7 +1,11 @@
-use crate::ast::{
-  expression::Expression,
-  statement::function::FunctionStatement,
-  evaluator::{Evaluator, EvaluatorResult, EvaluatorValue}, data_type::DataType,
+use crate::{
+  ast::{
+    expression::Expression,
+    statement::function::FunctionStatement,
+    evaluator::{Evaluator, EvaluatorResult, EvaluatorValue},
+    data_type::DataType,
+  },
+  diagnostic::error::DiagnosticError,
 };
 
 use super::Callable;
@@ -24,7 +28,7 @@ impl Callable for Println {
     &self,
     arguments: Vec<EvaluatorValue>,
     evaluator: &mut Box<Evaluator>,
-  ) -> EvaluatorResult {
+  ) -> EvaluatorResult<EvaluatorValue> {
     let mut value: String = String::new();
 
     for argument in arguments {
@@ -34,14 +38,16 @@ impl Callable for Println {
         EvaluatorValue::Double(d) => value = d.to_string(),
         EvaluatorValue::Boolean(b) => value = b.to_string(),
         EvaluatorValue::Return(r) => value = r.to_string(),
-        EvaluatorValue::Callable(_) | EvaluatorValue::Null | EvaluatorValue::None => {
-          return EvaluatorResult::Error
+        EvaluatorValue::Null => value = "null".to_string(),
+        EvaluatorValue::Callable(_) | EvaluatorValue::None => {
+          return Err(DiagnosticError::InvalidArgumentType(argument))
         }
       };
     }
 
     println!("{}", value);
-    EvaluatorResult::Value(EvaluatorValue::None)
+
+    Ok(EvaluatorValue::None)
   }
 
   fn get_type(&self) -> Option<DataType> {

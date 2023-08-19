@@ -90,6 +90,7 @@ pub enum TokenType {
 
   Bad,
   Identifier,
+  Comment,
   Eof,
 }
 
@@ -252,6 +253,7 @@ impl Display for TokenType {
       TokenType::Eof => write!(f, "eof"),
       TokenType::QuestionMark => write!(f, "?"),
       TokenType::Void => write!(f, "void"),
+      TokenType::Comment => write!(f, "comment"),
     }
   }
 }

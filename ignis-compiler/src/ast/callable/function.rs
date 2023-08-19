@@ -1,10 +1,13 @@
-use std::{cell::RefCell, rc::Rc, borrow::BorrowMut};
+use std::{cell::RefCell, rc::Rc, env::args_os};
 
-use crate::ast::{
-  data_type::DataType,
-  evaluator::{Evaluator, EvaluatorValue, EvaluatorResult},
-  statement::function::FunctionStatement,
-  environment::{Environment, self},
+use crate::{
+  ast::{
+    data_type::DataType,
+    evaluator::{Evaluator, EvaluatorValue, EvaluatorResult},
+    statement::function::FunctionStatement,
+    environment::Environment,
+  },
+  diagnostic::error::DiagnosticError,
 };
 
 use super::Callable;
@@ -38,30 +41,37 @@ impl Callable for Function {
     &self,
     arguments: Vec<EvaluatorValue>,
     evaluator: &mut Box<Evaluator>,
-  ) -> EvaluatorResult {
+  ) -> EvaluatorResult<EvaluatorValue> {
     let mut environment = Environment::new(Some(self.closure.clone()));
 
     for (i, parameter) in self.declaration.parameters.iter().enumerate() {
       match arguments.get(i) {
         Some(argument) => {
-          environment.define(
-            parameter.span.literal.clone(),
+          if argument.to_data_type() != parameter.data_type {
+            return Err(DiagnosticError::AssingInvalidType(
+              argument.to_data_type(),
+              parameter.data_type.clone(),
+              parameter.name.clone(),
+            ));
+          }
+
+          let _ = environment.define(
+            parameter.name.span.literal.clone(),
             argument.to_variable_environment(),
           );
         }
         None => {
-          return EvaluatorResult::Error;
+          return Err(DiagnosticError::MissingArgument(
+            parameter.name.span.literal.clone(),
+            parameter.name.clone(),
+          ))
         }
       };
     }
 
-    let result =
-      evaluator.execute_block(&self.declaration.body, Rc::new(RefCell::new(environment)));
-
-    // TODO: Return value
-    match result {
-      EvaluatorResult::Error => EvaluatorResult::Error,
-      EvaluatorResult::Value(value) => EvaluatorResult::Value(value),
+    match evaluator.execute_block(&self.declaration.body, Rc::new(RefCell::new(environment)))? {
+      EvaluatorValue::Return(value) => Ok(EvaluatorValue::Return(value)),
+      _ => Ok(EvaluatorValue::Return(Box::new(EvaluatorValue::Null))),
     }
   }
 

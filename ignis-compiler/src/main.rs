@@ -9,10 +9,11 @@ use std::{
 };
 
 use ast::{
-  parser::{Parser, ParserResult},
+  parser::Parser,
   lexer::Lexer,
   evaluator::Evaluator,
   Ast,
+  statement::{self, Statement},
 };
 use diagnostic::DiagnosticList;
 
@@ -47,27 +48,25 @@ fn run(source: String, evaluator: &mut Evaluator, relp: bool) -> Result<(), ()> 
   // }
 
   let mut parser = Parser::new(lexer.tokens);
-  let expressions = parser.parse();
-  let mut ast = Ast::new();
-  
-  for expression in expressions {
-    match expression {
-      ParserResult::Statement(expr) => ast.add(expr),
-      _ => {
-        display_diagnostic(&parser.diagnostics, relp);
-        return Err(());
-      }
-    }
-  }
+  let parser_result = parser.parse();
 
-  ast.visit(evaluator);
-  
-  let mut diagnostics = evaluator.diagnostics.borrow_mut();
+  let mut ast: Ast = match parser_result {
+    Ok(statements) => Ast::new(statements),
+    Err(_) => {
+      display_diagnostic(&parser.diagnostics, relp);
+      return Err(());
+    }
+  };
+
+  let mut diagnostics = DiagnosticList::new();
+
+  ast.visit(&mut diagnostics, evaluator);
+
 
   if diagnostics.diagnostics.len() > 0 {
     display_diagnostic(&diagnostics, relp);
   }
-  
+
   diagnostics.clean_diagnostic();
 
   Ok(())
@@ -102,9 +101,11 @@ fn run_prompt() -> Result<(), String> {
       println!("Bye!");
       exit(0);
     }
-    
+
     if buffer.contains("load") == true {
-      let path = buffer.split("load").collect::<Vec<&str>>()[1].trim().to_string();
+      let path = buffer.split("load").collect::<Vec<&str>>()[1]
+        .trim()
+        .to_string();
       match run_file(&path) {
         Ok(_) => (),
         Err(_) => println!("Could not import file"),
