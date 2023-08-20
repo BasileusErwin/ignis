@@ -1,0 +1,31 @@
+[package]
+name = "ignis-lang"
+version = "0.1.0"
+edition = "2021"
+
+[workspace.package]
+authors = ["Ignacio Perez <ignacio.perez2123@protonmail.com>"]
+description = "My programming language written in rust"
+keywords = ["programming", "language", "compiler", "interpreter"]
+license = "MIT"
+repository = "https://github.com/BasiluesErwin/ignis-lang"
+
+[dependencies]
+ast = { path = "./ast" }
+parser = { path = "./parser" }
+enums = { path = "./enums" }
+lexer = { path = "./lexer" }
+analizer = { path = "./analizer" }
+evaluator = { path = "./evaluator" }
+compiler = { path = "./compiler" }
+
+[workspace]
+members = [
+	"lexer",
+	"parser",
+	"ast",
+	"analizer",
+	"evaluator",
+	"compiler",
+	"enums",
+]
