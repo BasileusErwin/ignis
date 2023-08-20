@@ -1,14 +1,8 @@
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-  ast::{
-    data_type::DataType,
-    evaluator::{Evaluator, EvaluatorValue, EvaluatorResult},
-    statement::function::FunctionStatement,
-    environment::Environment,
-    execution_error::ExecutionError,
-  },
-  diagnostic::error::DiagnosticError,
+  ast::statement::function::FunctionStatement, diagnostic::error::DiagnosticError,
+  evaluator::{environment::Environment, Evaluator, EvaluatorResult, EvaluatorValue, execution_error::ExecutionError}, enums::data_type::DataType,
 };
 
 use super::Callable;

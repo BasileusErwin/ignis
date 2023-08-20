@@ -1,4 +1,5 @@
-use crate::ast::data_type::DataType;
+
+use crate::enums::data_type::DataType;
 
 use super::Expression;
 

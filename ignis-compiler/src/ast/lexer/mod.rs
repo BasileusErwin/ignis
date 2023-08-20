@@ -1,8 +1,9 @@
 pub mod text_span;
 pub mod token;
-pub mod token_type;
 
-use super::lexer::{text_span::TextSpan, token::Token, token_type::TokenType};
+use crate::enums::token_type::TokenType;
+
+use super::lexer::{text_span::TextSpan, token::Token};
 
 /*
  * Lexer
@@ -50,7 +51,7 @@ impl<'a> Lexer<'a> {
 
     self.tokens.push(Token::new(
       TokenType::Eof,
-      TextSpan::new(0, 0, self.line, '\0'.to_string()),
+      TextSpan::new(0, 0, self.line, '\0'.to_string(), 0),
     ));
   }
 
@@ -268,6 +269,7 @@ impl<'a> Lexer<'a> {
     (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_')
   }
 
+  // TODO: Fix var with only one character
   fn identifier(&mut self) -> TokenType {
     while self.is_identifier_starter() || self.is_identifier_letter() {
       self.advance();
@@ -352,7 +354,13 @@ impl<'a> Lexer<'a> {
   fn add_token_string(&mut self, value: String) {
     self.tokens.push(Token::new(
       TokenType::String,
-      TextSpan::new(self.start + 1, self.current - 1, self.line, value),
+      TextSpan::new(
+        self.start + 1,
+        self.current - 1,
+        self.line + 1,
+        value,
+        self.current - self.start,
+      ),
     ));
   }
 
@@ -369,7 +377,13 @@ impl<'a> Lexer<'a> {
 
     self.tokens.push(Token::new(
       kind,
-      TextSpan::new(self.start, self.current, self.line, literal),
+      TextSpan::new(
+        self.start,
+        self.current,
+        self.line + 1,
+        literal,
+        self.current - self.start,
+      ),
     ));
   }
 }

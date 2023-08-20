@@ -1,4 +1,6 @@
-use super::{token_type::TokenType, text_span::TextSpan};
+use crate::enums::token_type::TokenType;
+
+use super::text_span::TextSpan;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {

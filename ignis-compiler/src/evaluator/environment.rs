@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use crate::diagnostic::{DiagnosticList, error::DiagnosticError};
+use crate::{diagnostic::{DiagnosticList, error::DiagnosticError}, ast::lexer::token::Token};
 
-use super::{evaluator::EvaluatorValue, lexer::token::Token};
+use super::EvaluatorValue;
 
 type EnvironmentResult<T> = Result<T, DiagnosticError>;
 

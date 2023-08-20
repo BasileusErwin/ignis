@@ -1,8 +1,10 @@
-use crate::ast::{
-  lexer::{token::Token, token_type::TokenType, text_span::TextSpan},
-  expression::{Expression, variable::VariableExpression},
+use crate::{
+  ast::{
+    lexer::{token::Token, text_span::TextSpan},
+    expression::variable::VariableExpression,
+  },
   evaluator::EvaluatorValue,
-  data_type::DataType,
+  enums::{data_type::DataType, token_type::TokenType},
 };
 
 use super::DiagnosticList;

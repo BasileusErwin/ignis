@@ -4,19 +4,17 @@ pub struct TextSpan {
   pub end: usize,
   pub literal: String,
   pub line: usize,
+  pub column: usize,
 }
 
 impl TextSpan {
-  pub fn new(start: usize, end: usize, line: usize, literal: String) -> Self {
+  pub fn new(start: usize, end: usize, line: usize, literal: String, column: usize) -> Self {
     Self {
       start,
       end,
       line,
       literal,
+      column,
     }
-  }
-
-  pub fn _lenght(&self) -> usize {
-    self.end - self.start
   }
 }

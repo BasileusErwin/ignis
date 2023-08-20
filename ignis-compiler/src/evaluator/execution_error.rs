@@ -1,6 +1,6 @@
 use crate::diagnostic::{error::DiagnosticError, DiagnosticList};
 
-use super::evaluator::EvaluatorValue;
+use super::EvaluatorValue;
 
 pub enum ExecutionError {
   DiagnosticError(DiagnosticError),

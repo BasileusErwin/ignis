@@ -1,4 +1,7 @@
-use crate::ast::{expression::Expression, lexer::token::Token, data_type::DataType};
+use crate::{
+  ast::{expression::Expression, lexer::token::Token},
+  enums::data_type::DataType,
+};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Variable {

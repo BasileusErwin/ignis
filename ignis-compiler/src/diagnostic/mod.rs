@@ -2,12 +2,10 @@ pub mod error;
 
 use std::fmt::Display;
 
-use crate::ast::{
-  lexer::{text_span::TextSpan, token_type::TokenType, token::Token},
-  data_type::DataType,
-  evaluator::EvaluatorValue,
-  expression::{Expression, variable::VariableExpression},
-};
+use crate::{ast::{
+  lexer::{text_span::TextSpan, token::Token},
+  expression::variable::VariableExpression,
+}, enums::{data_type::DataType, token_type::TokenType}, evaluator::EvaluatorValue};
 
 #[derive(Debug)]
 pub enum DiagnosticLevel {
@@ -261,7 +259,7 @@ impl DiagnosticList {
   fn report_invalid_argument_type(&mut self, argument: &EvaluatorValue) {
     self.report_error(
       format!("Invalid argument type '{}'", argument.to_string()),
-      TextSpan::new(0, 0, 0, argument.to_string()),
+      TextSpan::new(0, 0, 0, argument.to_string(), 0),
     );
   }
 
@@ -302,7 +300,7 @@ impl DiagnosticList {
         name,
         data_type.to_string()
       ),
-      TextSpan::new(0, 0, 0, name.to_string()),
+      TextSpan::new(0, 0, 0, name.to_string(), 0),
     );
   }
 }

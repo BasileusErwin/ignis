@@ -1,21 +1,31 @@
+pub mod callable;
+pub mod environment;
+pub mod execution_error;
+
 use std::{rc::Rc, cell::RefCell};
 
-use crate::diagnostic::{DiagnosticList, error::DiagnosticError};
+use crate::{
+  diagnostic::{DiagnosticList, error::DiagnosticError},
+  enums::{data_type::DataType, token_type::TokenType},
+  ast::{
+    visitor::Visitor,
+    expression::{
+      binary::Binary, grouping::Grouping, literal::Literal, LiteralValue, unary::Unary,
+      variable::VariableExpression, assign::Assign, logical::Logical, ternary::Ternary, call::Call,
+      Expression,
+    },
+    lexer::token::Token,
+    statement::{
+      expression::ExpressionStatement, variable::Variable, block::Block, if_statement::IfStatement,
+      while_statement::WhileStatement, function::FunctionStatement, return_statement::Return,
+      Statement,
+    },
+  },
+};
 
-use super::{
-  visitor::Visitor,
-  expression::{
-    Expression, binary::Binary, literal::Literal, LiteralValue, grouping::Grouping, unary::Unary,
-    variable::VariableExpression, assign::Assign, ternary::Ternary, call::Call, logical::Logical,
-  },
-  lexer::{token_type::TokenType, token::Token},
-  statement::{
-    expression::ExpressionStatement, variable::Variable, Statement, if_statement::IfStatement,
-    block::Block, function::FunctionStatement, return_statement::Return,
-  },
-  environment::{Environment, VariableEnvironment},
-  data_type::DataType,
+use self::{
   callable::{Callable, function::Function, print::Println},
+  environment::{VariableEnvironment, Environment},
   execution_error::ExecutionError,
 };
 
@@ -301,7 +311,7 @@ impl Visitor<EvaluatorResult<EvaluatorValue>> for Evaluator {
 
   fn visit_while_statement(
     &mut self,
-    statement: &super::statement::while_statement::WhileStatement,
+    statement: &WhileStatement,
   ) -> EvaluatorResult<EvaluatorValue> {
     loop {
       let evaluator = self.evaluator(&statement.condition)?;
@@ -358,8 +368,8 @@ impl Visitor<EvaluatorResult<EvaluatorValue>> for Evaluator {
       Ok(value) => Ok(value),
       Err(error) => match error {
         ExecutionError::Return(value) => Ok(value),
-        _ => Err(error), 
-      }
+        _ => Err(error),
+      },
     }
   }
 

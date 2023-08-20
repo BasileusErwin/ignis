@@ -1,10 +1,12 @@
+use crate::enums::token_type::TokenType;
+
 use self::{
   binary::Binary, grouping::Grouping, literal::Literal, unary::Unary, variable::VariableExpression,
   logical::Logical, assign::Assign, ternary::Ternary, call::Call,
 };
 
 use super::{
-  lexer::{token_type::TokenType, token::Token},
+  lexer::token::Token,
   visitor::Visitor,
 };
 

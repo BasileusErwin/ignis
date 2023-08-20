@@ -1,4 +1,5 @@
-use super::lexer::token_type::TokenType;
+use super::token_type::TokenType;
+
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum DataType {
@@ -10,8 +11,8 @@ pub enum DataType {
   None,
   Pending,
   Void,
-  // TODO: Type non-primitive
   Variable(String),
+  // TODO: Type non-primitive
   Array(Vec<DataType>),
   ClassType(String),
   GenericType {
@@ -21,7 +22,6 @@ pub enum DataType {
   UnionType(Vec<DataType>),
   IntersectionType(Vec<DataType>),
   TupleType(Vec<DataType>),
-  LiteralType(String),
   AliasType(String),
 }
 
@@ -69,7 +69,6 @@ impl DataType {
         let type_strings: Vec<String> = types.iter().map(|t| t.to_string()).collect();
         format!("Tuple<{}>", type_strings.join(", "))
       }
-      DataType::LiteralType(literal) => literal.clone(),
       DataType::AliasType(alias) => alias.clone(),
       DataType::Void => "Void".to_string(),
     }

@@ -1,5 +1,7 @@
 mod ast;
 mod diagnostic;
+mod enums;
+mod evaluator;
 
 use std::{
   io::{self, Write, BufRead},
@@ -8,8 +10,9 @@ use std::{
   fs,
 };
 
-use ast::{parser::Parser, lexer::Lexer, evaluator::Evaluator, Ast};
+use ast::{parser::Parser, lexer::Lexer, Ast};
 use diagnostic::DiagnosticList;
+use evaluator::Evaluator;
 
 fn display_diagnostic(diagnostics: &DiagnosticList, relp: bool) {
   for diagnostic in diagnostics.diagnostics.iter() {

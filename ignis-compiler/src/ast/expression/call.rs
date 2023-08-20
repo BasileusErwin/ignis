@@ -1,4 +1,5 @@
-use crate::ast::{lexer::token::Token, data_type::DataType};
+use crate::ast::lexer::token::Token;
+use crate::enums::data_type::DataType;
 
 use super::Expression;
 

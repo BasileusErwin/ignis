@@ -1,22 +1,15 @@
-pub mod callable;
-pub mod data_type;
-pub mod environment;
-pub mod evaluator;
-pub mod expression;
-pub mod lexer;
 pub mod parser;
 pub mod statement;
 pub mod visitor;
-pub mod execution_error;
-
-use std::{vec, rc::Rc, cell::RefCell};
+pub mod expression;
+pub mod lexer;
 
 use crate::{
-  ast::evaluator::EvaluatorValue,
-  diagnostic::{DiagnosticList, self, error::DiagnosticError},
+  diagnostic::DiagnosticList,
+  evaluator::{EvaluatorResult, EvaluatorValue},
 };
 
-use self::{statement::Statement, visitor::Visitor, evaluator::EvaluatorResult};
+use self::{statement::Statement, visitor::Visitor};
 
 #[derive(Debug)]
 pub struct Ast {

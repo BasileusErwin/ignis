@@ -1,6 +1,6 @@
-use crate::ast::{
-  lexer::token::Token,
-  data_type::DataType,
+use crate::{
+  ast::lexer::token::Token,
+  enums::data_type::DataType,
 };
 
 #[derive(Debug, PartialEq, Clone)]

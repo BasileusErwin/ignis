@@ -3,10 +3,9 @@ pub mod print;
 
 use std::fmt::Debug;
 
-use super::{
-  data_type::DataType,
-  evaluator::{EvaluatorValue, EvaluatorResult, Evaluator},
-};
+use crate::enums::data_type::DataType;
+
+use super::{EvaluatorValue, Evaluator, EvaluatorResult};
 
 pub trait Callable: Debug {
   fn arity(&self) -> usize;

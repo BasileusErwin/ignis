@@ -1,10 +1,6 @@
 use crate::{
-  ast::{
-    evaluator::{Evaluator, EvaluatorResult, EvaluatorValue},
-    data_type::DataType,
-    execution_error::ExecutionError,
-  },
   diagnostic::error::DiagnosticError,
+  evaluator::{EvaluatorValue, Evaluator, EvaluatorResult, execution_error::ExecutionError}, enums::data_type::DataType,
 };
 
 use super::Callable;

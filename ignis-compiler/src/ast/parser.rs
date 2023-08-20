@@ -1,7 +1,7 @@
-use crate::diagnostic::{DiagnosticList, error::DiagnosticError};
+use crate::{diagnostic::{DiagnosticList, error::DiagnosticError}, enums::{data_type::DataType, token_type::TokenType}};
 
 use super::{
-  lexer::{token::Token, token_type::TokenType},
+  lexer::token::Token ,
   expression::{
     Expression, binary::Binary, unary::Unary, literal::Literal, LiteralValue, grouping::Grouping,
     logical::Logical, assign::Assign, variable::VariableExpression, ternary, call::Call,
@@ -16,7 +16,6 @@ use super::{
     function::{FunctionStatement, FunctionParamater},
     return_statement::Return,
   },
-  data_type::DataType,
 };
 
 type ParserResult<T> = Result<T, DiagnosticError>;
@@ -386,7 +385,11 @@ impl Parser {
         if !self.check(TokenType::RightParen) {
           loop {
             if parameters.len() >= 255 {
-              // TODO: report error
+              return Err(DiagnosticError::InvalidNumberOfArguments(
+                255,
+                parameters.len(),
+                name.clone(),
+              ));
             }
 
             let param = self.consume(TokenType::Identifier)?;

@@ -1,7 +1,6 @@
-use crate::ast::{
+use crate::{ast::{
   lexer::token::Token,
-  data_type::DataType,
-};
+}, enums::data_type::DataType};
 use super::Expression;
 
 #[derive(Debug, PartialEq, Clone)]
