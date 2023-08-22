@@ -283,7 +283,23 @@ impl<'a> Lexer<'a> {
   }
 
   fn string(&mut self) -> Option<String> {
+    let mut result: String = String::new();
+
     while self.peek() != '\"' && !self.is_at_end() {
+      if self.peek() == '\\' {
+        self.advance();  
+        
+        match self.peek() {
+          '\"' => result.push('\"'),
+          '\\' => result.push('\\'),
+          _ => {
+            
+          }  
+        }
+      } else {
+        result.push(self.peek());
+      }
+
       self.advance();
     }
 
@@ -293,7 +309,7 @@ impl<'a> Lexer<'a> {
 
     self.advance();
 
-    Some(self.source[self.start + 1..self.current - 1].to_string())
+    Some(result)
   }
 
   /**
