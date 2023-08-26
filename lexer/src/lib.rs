@@ -287,14 +287,12 @@ impl<'a> Lexer<'a> {
 
     while self.peek() != '\"' && !self.is_at_end() {
       if self.peek() == '\\' {
-        self.advance();  
-        
+        self.advance();
+
         match self.peek() {
           '\"' => result.push('\"'),
           '\\' => result.push('\\'),
-          _ => {
-            
-          }  
+          _ => {}
         }
       } else {
         result.push(self.peek());
@@ -339,14 +337,27 @@ impl<'a> Lexer<'a> {
 
   fn number(&mut self) -> bool {
     let mut is_double: bool = false;
-    while self.peek().is_ascii_digit() {
+    while self.peek().is_ascii_digit() || self.peek() == '_' {
+
+      if self.peek() == '_' {
+        if !self.peek_next().is_ascii_digit() || !self.peek_prev().is_ascii_digit() {
+          return false;
+        }
+      }
+
       self.advance();
     }
 
     if self.peek() == '.' && self.peek_next().is_ascii_digit() {
       self.advance();
 
-      while self.peek().is_ascii_digit() {
+      while self.peek().is_ascii_digit() || self.peek() == '_' {
+        if self.peek() == '_' {
+          if !self.peek_next().is_ascii_digit() || !self.peek_prev().is_ascii_digit() {
+            return false;
+          }
+        }
+
         self.advance();
       }
 
@@ -358,6 +369,10 @@ impl<'a> Lexer<'a> {
 
   fn peek_next(&self) -> char {
     self.source.chars().nth(self.current + 1).unwrap_or('\0')
+  }
+
+  fn peek_prev(&self) -> char {
+    self.source.chars().nth(self.current - 1).unwrap_or('\0')
   }
 
   /**
@@ -386,10 +401,16 @@ impl<'a> Lexer<'a> {
   It takes the text of the current lexeme and creates a new token.
   */
   fn add_token(&mut self, kind: TokenType) {
-    let literal = self.source[self.start..self.current].to_string();
+    let mut literal = self.source[self.start..self.current].to_string();
 
     if kind == TokenType::Comment {
       return;
+    }
+
+    if kind == TokenType::Int || kind == TokenType::Double {
+      if literal.contains("_") {
+        literal = literal.replace("_", "");
+      }
     }
 
     self.tokens.push(Token::new(
