@@ -10,22 +10,28 @@ keywords = ["programming", "language", "compiler", "interpreter"]
 license = "MIT"
 repository = "https://github.com/BasiluesErwin/ignis-lang"
 
+[[bin]]
+name = "ignisc"
+path = "./ignisc/src/main.rs"
+
 [dependencies]
 ast = { path = "./ast" }
 parser = { path = "./parser" }
 enums = { path = "./enums" }
 lexer = { path = "./lexer" }
-analizer = { path = "./analizer" }
+analyzer = { path = "./analyzer" }
 evaluator = { path = "./evaluator" }
 compiler = { path = "./compiler" }
+
 
 [workspace]
 members = [
 	"lexer",
 	"parser",
 	"ast",
-	"analizer",
+	"analyzer",
 	"evaluator",
 	"compiler",
 	"enums",
+	"ignisc"
 ]

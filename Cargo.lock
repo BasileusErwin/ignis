@@ -3,7 +3,7 @@
 version = 3
 
 [[package]]
-name = "analizer"
+name = "analyzer"
 version = "0.1.0"
 
 [[package]]
@@ -35,7 +35,20 @@ dependencies = [
 name = "ignis-lang"
 version = "0.1.0"
 dependencies = [
- "analizer",
+ "analyzer",
+ "ast",
+ "compiler",
+ "enums",
+ "evaluator",
+ "lexer",
+ "parser",
+]
+
+[[package]]
+name = "ignisc"
+version = "0.1.0"
+dependencies = [
+ "analyzer",
  "ast",
  "compiler",
  "enums",
