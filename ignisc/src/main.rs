@@ -5,8 +5,14 @@ use std::{
   fs,
 };
 
-mod diagnostic;
-
+use analyzer::{
+  Analyzer,
+  debug::{display_ir, display_block},
+  ir::instruction::{block::IRBlock, IRInstruction},
+  AnalyzerResult,
+  analyzer_error::AnalyzerDiagnosticError,
+  analyzer_value::AnalyzerValue,
+};
 use parser::Parser;
 use lexer::Lexer;
 use ast::{Ast, statement::Statement, visitor::Visitor};
@@ -14,24 +20,6 @@ use diagnostic::{DiagnosticList, error::DiagnosticError};
 use evaluator::{
   Evaluator, EvaluatorResult, evaluator_value::EvaluatorValue, execution_error::ExecutionError,
 };
-
-fn visit(
-  statements: Vec<Statement>,
-  diagnostics: &mut DiagnosticList,
-  visitor: &mut dyn Visitor<EvaluatorResult<EvaluatorValue>>,
-) {
-  for statement in &statements {
-    match statement.accept(visitor) {
-      Ok(_) => continue,
-      Err(error) => match error {
-        ExecutionError::DiagnosticError(diagnostic) => {
-          DiagnosticError::from_evaluator_error(diagnostic).report(diagnostics);
-        }
-        _ => (),
-      },
-    }
-  }
-}
 
 fn display_diagnostic(diagnostics: &DiagnosticList, relp: bool) {
   for diagnostic in diagnostics.diagnostics.iter() {
@@ -81,7 +69,30 @@ fn run(source: String, evaluator: &mut Evaluator, relp: bool) -> Result<(), ()> 
     }
   };
 
-  visit(ast.statements, &mut diagnostics, evaluator);
+  let mut analyzer = Analyzer::new();
+
+  // for result in &ast.statements {
+  //   println!("{:?}", result);
+  // }
+
+  analyzer.analyze(&mut ast.statements);
+
+  for diagnostic in &analyzer.diagnostics {
+    DiagnosticError::report(
+      &DiagnosticError::from_evaluator_error(diagnostic.clone()),
+      &mut diagnostics,
+    );
+  }
+
+  for block in &analyzer.block_stack {
+    display_block(&block.clone(), "Block", 1);
+  }
+
+  for ir in &analyzer.irs {
+    display_ir(ir, 1);
+  }
+
+  // visit(ast.statements, &mut diagnostics, evaluator);
 
   if diagnostics.diagnostics.len() > 0 {
     display_diagnostic(&diagnostics, relp);

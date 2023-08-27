@@ -2,11 +2,11 @@ use {
   lexer::{token::Token, text_span::TextSpan},
   ast::expression::variable::VariableExpression,
   enums::{data_type::DataType, token_type::TokenType},
-  evaluator::evaluator_value::EvaluatorValue,
+  analyzer::analyzer_error::AnalyzerDiagnosticError,
+  parser::ParserDiagnosticError,
 };
 
-use evaluator::evaluator_error::EvaluatorDiagnosticError;
-use parser::ParserDiagnosticError;
+use analyzer::analyzer_value::AnalyzerValue;
 
 use super::DiagnosticList;
 
@@ -23,62 +23,98 @@ pub enum DiagnosticError {
   InvalidAssignmentTarget(TextSpan),
   ExpectedTypeAfterVariable(Token),
 
-  // Evaluator | Analizer
+  // Analyzer | Analizer
   UndeclaredVariable(VariableExpression),
-  InvalidUnaryOperatorForDataType(Token, EvaluatorValue),
+  InvalidUnaryOperatorForDataType(Token, AnalyzerValue),
   NotCallable(Token),
   InvalidNumberOfArguments(usize, usize, Token),
   AssingInvalidType(DataType, DataType, Token),
-  InvalidArgumentType(EvaluatorValue),
+  InvalidArgumentType(AnalyzerValue),
   MissingArgument(String, Token),
-  InvalidComparison(EvaluatorValue, EvaluatorValue, Token),
+  InvalidComparison(AnalyzerValue, AnalyzerValue, Token),
   InvalidOperator(Token),
   InvalidUnaryOperator(Token),
   UndefinedVariable(Token),
   VariableAlreadyDefined(String, DataType),
   InvalidReassignedVariable(TextSpan),
+  TypeMismatch(DataType, DataType, Token),
+  TypeMismatchUnary(DataType, Token),
+  CannotSubtract(AnalyzerValue, AnalyzerValue, Token),
+  CannotMultiply(AnalyzerValue, AnalyzerValue, Token),
+  CannotDivide(AnalyzerValue, AnalyzerValue, Token),
+  CannotModulo(AnalyzerValue, AnalyzerValue, Token),
+  FunctionAlreadyDefined(String),
+  ClassAlreadyDefined(String),
+  ArgumentTypeMismatch(DataType, DataType, Token),
 }
 
 impl DiagnosticError {
-  pub fn from_evaluator_error(error: EvaluatorDiagnosticError) -> Self {
+  pub fn from_evaluator_error(error: AnalyzerDiagnosticError) -> Self {
     match error {
-      EvaluatorDiagnosticError::UndeclaredVariable(expression) => {
+      AnalyzerDiagnosticError::UndeclaredVariable(expression) => {
         DiagnosticError::UndeclaredVariable(expression)
       }
-      EvaluatorDiagnosticError::InvalidUnaryOperatorForDataType(operator, right) => {
+      AnalyzerDiagnosticError::InvalidUnaryOperatorForDataType(operator, right) => {
         DiagnosticError::InvalidUnaryOperatorForDataType(operator, right)
       }
-      EvaluatorDiagnosticError::NotCallable(token) => DiagnosticError::NotCallable(token),
-      EvaluatorDiagnosticError::InvalidNumberOfArguments(arity, arguments, token) => {
+      AnalyzerDiagnosticError::NotCallable(token) => DiagnosticError::NotCallable(token),
+      AnalyzerDiagnosticError::InvalidNumberOfArguments(arity, arguments, token) => {
         DiagnosticError::InvalidNumberOfArguments(arity, arguments, token)
       }
-      EvaluatorDiagnosticError::AssingInvalidType(argument, data_type, name) => {
+      AnalyzerDiagnosticError::AssingInvalidType(argument, data_type, name) => {
         DiagnosticError::AssingInvalidType(argument, data_type, name)
       }
-      EvaluatorDiagnosticError::InvalidArgumentType(argument) => {
+      AnalyzerDiagnosticError::InvalidArgumentType(argument) => {
         DiagnosticError::InvalidArgumentType(argument)
       }
-      EvaluatorDiagnosticError::MissingArgument(name, token) => {
+      AnalyzerDiagnosticError::MissingArgument(name, token) => {
         DiagnosticError::MissingArgument(name, token)
       }
-      EvaluatorDiagnosticError::InvalidComparison(left, right, token) => {
-        (DiagnosticError::InvalidComparison(left, right, token))
+      AnalyzerDiagnosticError::InvalidComparison(left, right, token) => {
+        DiagnosticError::InvalidComparison(left, right, token)
       }
-      EvaluatorDiagnosticError::InvalidOperator(token) => DiagnosticError::InvalidOperator(token),
-      EvaluatorDiagnosticError::InvalidUnaryOperator(token) => {
+      AnalyzerDiagnosticError::InvalidOperator(token) => DiagnosticError::InvalidOperator(token),
+      AnalyzerDiagnosticError::InvalidUnaryOperator(token) => {
         DiagnosticError::InvalidUnaryOperator(token)
       }
-      EvaluatorDiagnosticError::UndefinedVariable(token) => {
+      AnalyzerDiagnosticError::UndefinedVariable(token) => {
         DiagnosticError::UndefinedVariable(token)
       }
-      EvaluatorDiagnosticError::VariableAlreadyDefined(name, data_type) => {
+      AnalyzerDiagnosticError::VariableAlreadyDefined(name, data_type) => {
         DiagnosticError::VariableAlreadyDefined(name, data_type)
       }
-      EvaluatorDiagnosticError::InvalidAssignmentTarget(span) => {
+      AnalyzerDiagnosticError::InvalidAssignmentTarget(span) => {
         DiagnosticError::InvalidAssignmentTarget(span)
       }
-      EvaluatorDiagnosticError::InvalidReassignedVariable(span) => {
+      AnalyzerDiagnosticError::InvalidReassignedVariable(span) => {
         DiagnosticError::InvalidReassignedVariable(span)
+      }
+      AnalyzerDiagnosticError::TypeMismatch(left, right, token) => {
+        DiagnosticError::TypeMismatch(left, right, token)
+      }
+      AnalyzerDiagnosticError::CannotSubtract(left, right, token) => {
+        DiagnosticError::CannotSubtract(left, right, token)
+      }
+      AnalyzerDiagnosticError::CannotMultiply(left, right, token) => {
+        DiagnosticError::CannotMultiply(left, right, token)
+      }
+      AnalyzerDiagnosticError::CannotDivide(left, right, token) => {
+        DiagnosticError::CannotDivide(left, right, token)
+      }
+      AnalyzerDiagnosticError::CannotModulo(left, right, token) => {
+        DiagnosticError::CannotModulo(left, right, token)
+      }
+      AnalyzerDiagnosticError::FunctionAlreadyDefined(name) => {
+        DiagnosticError::FunctionAlreadyDefined(name)
+      }
+      AnalyzerDiagnosticError::ClassAlreadyDefined(name) => {
+        DiagnosticError::ClassAlreadyDefined(name)
+      }
+      AnalyzerDiagnosticError::ArgumentTypeMismatch(expected, received, token) => {
+        DiagnosticError::ArgumentTypeMismatch(expected, received, token)
+      }
+      AnalyzerDiagnosticError::TypeMismatchUnary(right, token) => {
+        DiagnosticError::TypeMismatchUnary(right, token)
       }
     }
   }
@@ -195,6 +231,33 @@ impl DiagnosticError {
       }
       DiagnosticError::InvalidReassignedVariable(span) => {
         diagnostics.report_invalid_reassigned_variable(&span);
+      }
+      DiagnosticError::TypeMismatch(left, right, token) => {
+        diagnostics.report_type_mismatch(&left, &right, &token);
+      }
+      DiagnosticError::CannotSubtract(left, right, token) => {
+        diagnostics.report_cannot_subtract(&left, &right, &token);
+      }
+      DiagnosticError::CannotMultiply(left, right, token) => {
+        diagnostics.report_cannot_multiply(&left, &right, &token);
+      }
+      DiagnosticError::CannotDivide(left, right, token) => {
+        diagnostics.report_cannot_divide(&left, &right, &token);
+      }
+      DiagnosticError::CannotModulo(left, right, token) => {
+        diagnostics.report_cannot_modulo(&left, &right, &token);
+      }
+      DiagnosticError::FunctionAlreadyDefined(name) => {
+        diagnostics.report_function_already_defined(&name);
+      }
+      DiagnosticError::ClassAlreadyDefined(name) => {
+        diagnostics.report_class_already_defined(&name);
+      }
+      DiagnosticError::ArgumentTypeMismatch(expected, recived, token) => {
+        diagnostics.report_argument_type_mismatch(&expected, &recived, &token);
+      }
+      DiagnosticError::TypeMismatchUnary(right, token) => {
+        diagnostics.report_type_mismatch_unary(&right, &token);
       }
     }
   }

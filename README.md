@@ -5,6 +5,7 @@
 ### Goals
 
 - [ ] TypeScript-like syntax
+  - [ ] Template Literal
 - [ ] Compiled
 - [ ] Static and strict typing
 - [ ] Possibility of transpiling to Lua and compability with neovim

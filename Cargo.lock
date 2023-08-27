@@ -5,6 +5,11 @@ version = 3
 [[package]]
 name = "analyzer"
 version = "0.1.0"
+dependencies = [
+ "ast",
+ "enums",
+ "lexer",
+]
 
 [[package]]
 name = "ast"
@@ -17,6 +22,19 @@ dependencies = [
 [[package]]
 name = "compiler"
 version = "0.1.0"
+
+[[package]]
+name = "diagnostic"
+version = "0.1.0"
+dependencies = [
+ "analyzer",
+ "ast",
+ "compiler",
+ "enums",
+ "evaluator",
+ "lexer",
+ "parser",
+]
 
 [[package]]
 name = "enums"
@@ -32,12 +50,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "ignis-lang"
+name = "ignis-lan"
 version = "0.1.0"
 dependencies = [
  "analyzer",
  "ast",
  "compiler",
+ "diagnostic",
  "enums",
  "evaluator",
  "lexer",
@@ -51,6 +70,7 @@ dependencies = [
  "analyzer",
  "ast",
  "compiler",
+ "diagnostic",
  "enums",
  "evaluator",
  "lexer",

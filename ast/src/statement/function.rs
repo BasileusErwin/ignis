@@ -7,11 +7,23 @@ use super::Statement;
 pub struct FunctionParamater {
   pub name: Token,
   pub data_type: DataType,
+  // TODO:
+  pub is_mutable: bool,
+  pub is_reference: bool,
 }
 
 impl FunctionParamater {
   pub fn new(name: Token, data_type: DataType) -> Self {
-    Self { name, data_type }
+    Self {
+      name,
+      data_type,
+      is_mutable: false,
+      is_reference: false,
+    }
+  }
+
+  pub fn to_string(&self) -> String {
+    format!("{}: {}", self.name.span.literal, self.data_type.to_string())
   }
 }
 

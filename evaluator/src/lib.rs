@@ -1,7 +1,7 @@
 pub mod callable;
 pub mod environment;
-pub mod evaluator_value;
 pub mod evaluator_error;
+pub mod evaluator_value;
 pub mod execution_error;
 
 use ast::visitor::Visitor;
@@ -52,7 +52,7 @@ impl Clone for Evaluator {
 }
 
 impl Visitor<EvaluatorResult<EvaluatorValue>> for Evaluator {
-  fn visit_binary_expression(&self, expression: &Binary) -> EvaluatorResult<EvaluatorValue> {
+  fn visit_binary_expression(&mut self, expression: &Binary) -> EvaluatorResult<EvaluatorValue> {
     let left = self.evaluator(&*expression.left)?;
     let right = self.evaluator(&*expression.right)?;
 
@@ -104,7 +104,7 @@ impl Visitor<EvaluatorResult<EvaluatorValue>> for Evaluator {
       },
       _ => {
         return Err(ExecutionError::DiagnosticError(
-        EvaluatorDiagnosticError::InvalidOperator(expression.operator.clone()),
+          EvaluatorDiagnosticError::InvalidOperator(expression.operator.clone()),
         ))
       }
     };
@@ -112,7 +112,7 @@ impl Visitor<EvaluatorResult<EvaluatorValue>> for Evaluator {
     match result {
       EvaluatorValue::None => {
         return Err(ExecutionError::DiagnosticError(
-        EvaluatorDiagnosticError::InvalidComparison(
+          EvaluatorDiagnosticError::InvalidComparison(
             left.clone(),
             right.clone(),
             expression.operator.clone(),
@@ -123,11 +123,14 @@ impl Visitor<EvaluatorResult<EvaluatorValue>> for Evaluator {
     }
   }
 
-  fn visit_grouping_expression(&self, expression: &Grouping) -> EvaluatorResult<EvaluatorValue> {
+  fn visit_grouping_expression(
+    &mut self,
+    expression: &Grouping,
+  ) -> EvaluatorResult<EvaluatorValue> {
     self.evaluator(&expression.expression)
   }
 
-  fn visit_literal_expression(&self, expression: &Literal) -> EvaluatorResult<EvaluatorValue> {
+  fn visit_literal_expression(&mut self, expression: &Literal) -> EvaluatorResult<EvaluatorValue> {
     match expression.value.clone() {
       LiteralValue::Boolean(value) => Ok(EvaluatorValue::Boolean(value)),
       LiteralValue::Double(value) => Ok(EvaluatorValue::Double(value)),
@@ -137,7 +140,7 @@ impl Visitor<EvaluatorResult<EvaluatorValue>> for Evaluator {
     }
   }
 
-  fn visit_unary_expression(&self, expression: &Unary) -> EvaluatorResult<EvaluatorValue> {
+  fn visit_unary_expression(&mut self, expression: &Unary) -> EvaluatorResult<EvaluatorValue> {
     let right: EvaluatorValue = self.evaluator(&expression.right)?;
 
     match expression.operator.kind {
@@ -147,7 +150,7 @@ impl Visitor<EvaluatorResult<EvaluatorValue>> for Evaluator {
         EvaluatorValue::Int(r) => return Ok(EvaluatorValue::Int(-r)),
         _ => {
           return Err(ExecutionError::DiagnosticError(
-          EvaluatorDiagnosticError::InvalidUnaryOperatorForDataType(
+            EvaluatorDiagnosticError::InvalidUnaryOperatorForDataType(
               expression.operator.clone(),
               right.clone(),
             ),
@@ -158,18 +161,18 @@ impl Visitor<EvaluatorResult<EvaluatorValue>> for Evaluator {
     };
 
     Err(ExecutionError::DiagnosticError(
-    EvaluatorDiagnosticError::InvalidUnaryOperator(expression.operator.clone()),
+      EvaluatorDiagnosticError::InvalidUnaryOperator(expression.operator.clone()),
     ))
   }
 
   fn visit_expression_statement(
-    &self,
+    &mut self,
     statement: &ExpressionStatement,
   ) -> EvaluatorResult<EvaluatorValue> {
     self.evaluator(&statement.expression)
   }
 
-  fn visit_variable_statement(&self, variable: &Variable) -> EvaluatorResult<EvaluatorValue> {
+  fn visit_variable_statement(&mut self, variable: &Variable) -> EvaluatorResult<EvaluatorValue> {
     let mut value: EvaluatorValue = EvaluatorValue::Null;
 
     if let Some(initializer) = &variable.initializer {
@@ -188,7 +191,7 @@ impl Visitor<EvaluatorResult<EvaluatorValue>> for Evaluator {
   }
 
   fn visit_variable_expression(
-    &self,
+    &mut self,
     variable: &VariableExpression,
   ) -> EvaluatorResult<EvaluatorValue> {
     let environment = self.environment.borrow_mut();
@@ -203,12 +206,12 @@ impl Visitor<EvaluatorResult<EvaluatorValue>> for Evaluator {
     }
 
     Err(ExecutionError::DiagnosticError(
-    EvaluatorDiagnosticError::UndeclaredVariable(variable.clone()),
+      EvaluatorDiagnosticError::UndeclaredVariable(variable.clone()),
     ))
   }
 
   // TODO: Validate if a variable is being declared for the first time without using the let or const keyword
-  fn visit_assign_expression(&self, expression: &Assign) -> EvaluatorResult<EvaluatorValue> {
+  fn visit_assign_expression(&mut self, expression: &Assign) -> EvaluatorResult<EvaluatorValue> {
     let value: EvaluatorValue = self.evaluator(&expression.value)?;
 
     let mut environment = self.environment.borrow_mut();
@@ -224,7 +227,7 @@ impl Visitor<EvaluatorResult<EvaluatorValue>> for Evaluator {
     }
   }
 
-  fn visit_logical_expression(&self, expression: &Logical) -> EvaluatorResult<EvaluatorValue> {
+  fn visit_logical_expression(&mut self, expression: &Logical) -> EvaluatorResult<EvaluatorValue> {
     let left: EvaluatorValue = self.evaluator(&expression.left)?;
 
     if expression.operator.kind == TokenType::Or {
@@ -273,7 +276,7 @@ impl Visitor<EvaluatorResult<EvaluatorValue>> for Evaluator {
     Ok(EvaluatorValue::None)
   }
 
-  fn visit_ternary_expression(&self, expression: &Ternary) -> EvaluatorResult<EvaluatorValue> {
+  fn visit_ternary_expression(&mut self, expression: &Ternary) -> EvaluatorResult<EvaluatorValue> {
     let condition: EvaluatorValue = self.evaluator(&expression.condition)?;
 
     if self.is_truthy(&condition) {
@@ -283,7 +286,7 @@ impl Visitor<EvaluatorResult<EvaluatorValue>> for Evaluator {
     }
   }
 
-  fn visit_call_expression(&self, expression: &Call) -> EvaluatorResult<EvaluatorValue> {
+  fn visit_call_expression(&mut self, expression: &Call) -> EvaluatorResult<EvaluatorValue> {
     let calle = self.evaluator(&expression.callee)?;
 
     let mut arguments: Vec<EvaluatorValue> = Vec::new();
@@ -296,14 +299,14 @@ impl Visitor<EvaluatorResult<EvaluatorValue>> for Evaluator {
       EvaluatorValue::Callable(func) => func,
       _ => {
         return Err(ExecutionError::DiagnosticError(
-        EvaluatorDiagnosticError::NotCallable(expression.paren.clone()),
+          EvaluatorDiagnosticError::NotCallable(expression.paren.clone()),
         ))
       }
     };
 
     if arguments.len() != function.arity() {
       return Err(ExecutionError::DiagnosticError(
-      EvaluatorDiagnosticError::InvalidNumberOfArguments(
+        EvaluatorDiagnosticError::InvalidNumberOfArguments(
           function.arity(),
           arguments.len(),
           expression.paren.clone(),
@@ -365,12 +368,12 @@ impl Evaluator {
       diagnostics: Vec::new(),
     }
   }
-  
+
   fn report_error(&mut self, error: EvaluatorDiagnosticError) {
     self.diagnostics.push(error);
   }
 
-  pub fn evaluator(&self, expression: &Expression) -> EvaluatorResult<EvaluatorValue> {
+  pub fn evaluator(&mut self, expression: &Expression) -> EvaluatorResult<EvaluatorValue> {
     expression.accept(self)
   }
 

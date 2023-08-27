@@ -1,5 +1,5 @@
 [package]
-name = "ignis-lang"
+name = "ignis-lan"
 version = "0.1.0"
 edition = "2021"
 
@@ -22,10 +22,12 @@ lexer = { path = "./lexer" }
 analyzer = { path = "./analyzer" }
 evaluator = { path = "./evaluator" }
 compiler = { path = "./compiler" }
+diagnostic = { path = "./diagnostic"}
 
 
 [workspace]
 members = [
+	"ignisc",
 	"lexer",
 	"parser",
 	"ast",
@@ -33,5 +35,5 @@ members = [
 	"evaluator",
 	"compiler",
 	"enums",
-	"ignisc"
+	"diagnostic"
 ]

@@ -29,7 +29,7 @@ pub enum Expression {
 }
 
 impl Expression {
-  pub fn accept<R>(&self, visitor: &dyn Visitor<R>) -> R {
+  pub fn accept<R>(&self, visitor: &mut dyn Visitor<R>) -> R {
     match self {
       Expression::Grouping(grouping) => visitor.visit_grouping_expression(grouping),
       Expression::Binary(binary) => visitor.visit_binary_expression(binary),

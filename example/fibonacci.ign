@@ -1,0 +1,9 @@
+function fibonacci(num: int): int {
+  if (num < 2) {
+     return num;
+  }
+
+  return fubonacci(num - 1) + fibonacci(num - 2); 
+}
+
+println(fibonacci(40));

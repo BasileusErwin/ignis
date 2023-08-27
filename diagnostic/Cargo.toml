@@ -1,5 +1,5 @@
 [package]
-name = "ignisc"
+name = "diagnostic"
 version = "0.1.0"
 edition = "2021"
 authors.workspace = true
@@ -18,4 +18,3 @@ lexer = { path = "../lexer" }
 analyzer = { path = "../analyzer" }
 evaluator = { path = "../evaluator" }
 compiler = { path = "../compiler" }
-diagnostic = { path = "../diagnostic" }

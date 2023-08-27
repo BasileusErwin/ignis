@@ -8,6 +8,7 @@ pub enum DataType {
   Double,
   Boolean,
   Char,
+  Null,
   None,
   Pending,
   Void,
@@ -34,6 +35,7 @@ impl DataType {
       TokenType::BooleanType => DataType::Boolean,
       TokenType::IntType => DataType::Int,
       TokenType::Void => DataType::Void,
+      TokenType::Null => DataType::Null,
       _ => DataType::None,
     }
   }
@@ -70,6 +72,7 @@ impl DataType {
         format!("Tuple<{}>", type_strings.join(", "))
       }
       DataType::AliasType(alias) => alias.clone(),
+      DataType::Null => "Null".to_string(),
       DataType::Void => "Void".to_string(),
     }
   }

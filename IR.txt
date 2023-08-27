@@ -1,0 +1,58 @@
+Some(Function(IRFunction { name: "println", parameters: [IRVariable { name: "message", data_type: None, is_mutable: false, is_reference: false }], return_type: Void, body: None }))
+Some(Function(IRFunction { name: "println", parameters: [IRVariable { name: "message", data_type: None, is_mutable: false, is_reference: false }], return_type: Void, body: None }))
+Some(Function(IRFunction { name: "main", parameters: [], return_type: Void, body: Some(IRBlock { instructions: [Block(IRBlock { instructions: [Function(IRFunction { name: "println", parameters: [IRVariable { name: "message", data_type: None, is_mutable: false, is_reference: false }], return_type: Void, body: None })], scopes_variables: [IRVariable { name: "helloWorld", data_type: String, is_mutable: false, is_reference: false }, IRVariable { name: "num", data_type: Int, is_mutable: false, is_reference: false }] })], scopes_variables: [] }) }))
+[]
+Function:
+  Name: println
+  Parameters:
+    Name: message
+    DataType: None
+    Is mutable: false
+    Is reference: false
+  Return type: Void
+
+Function:
+  Name: main
+  Parameters:
+  Return type: Void
+  Body:
+Block:
+  Instructions:
+Block:
+  Instructions:
+Function:
+  Name: println
+  Parameters:
+    Name: message
+    DataType: None
+    Is mutable: false
+    Is reference: false
+  Return type: Void
+
+
+
+
+Call:
+  Function:
+Function:
+  Name: main
+  Parameters:
+  Return type: Void
+  Body:
+Block:
+  Instructions:
+Block:
+  Instructions:
+Function:
+  Name: println
+  Parameters:
+    Name: message
+    DataType: None
+    Is mutable: false
+    Is reference: false
+  Return type: Void
+
+
+
+
+  Arguments:
