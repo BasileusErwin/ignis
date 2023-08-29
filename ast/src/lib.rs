@@ -17,4 +17,12 @@ impl Ast {
   pub fn add(&mut self, statement: Statement) {
     self.statements.push(statement);
   }
+
+  pub fn to_json(&self) -> Vec<serde_json::Value> {
+    self
+      .statements
+      .iter()
+      .map(|x| x.to_json())
+      .collect::<Vec<serde_json::Value>>()
+  }
 }

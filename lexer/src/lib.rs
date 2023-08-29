@@ -423,6 +423,17 @@ impl<'a> Lexer<'a> {
       ),
     ));
   }
+
+  pub fn display_lexer(&self) {
+    for token in &self.tokens {
+      println!("Token: ");
+      println!("  Type: {:?}", token.kind);
+      println!("  Line: {}", token.span.line);
+      println!("  Column: {}", token.span.column);
+      println!("  Literal: {}", token.span.literal);
+      println!("");
+    }
+  }
 }
 
 #[cfg(test)]

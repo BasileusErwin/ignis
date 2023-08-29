@@ -5,13 +5,15 @@ use std::{
   fs,
 };
 
+use serde_json;
+
 use analyzer::{
   Analyzer,
   debug::{display_ir, display_block},
 };
 use parser::Parser;
 use lexer::Lexer;
-use ast::Ast;
+use ast::{Ast, statement};
 use diagnostic::{DiagnosticList, error::DiagnosticError};
 use evaluator::Evaluator;
 
@@ -41,9 +43,7 @@ fn run(source: String, evaluator: &mut Evaluator, relp: bool) -> Result<(), ()> 
   let mut lexer: Lexer<'_> = Lexer::new(&source);
   lexer.scan_tokens();
 
-  // for token in &lexer.tokens {
-  //   println!("{:?}", token);
-  // }
+  lexer.display_lexer();
 
   let mut parser = Parser::new(lexer.tokens);
   let parser_result = parser.parse();
@@ -63,11 +63,10 @@ fn run(source: String, evaluator: &mut Evaluator, relp: bool) -> Result<(), ()> 
     }
   };
 
-  let mut analyzer = Analyzer::new();
+  let pretty_string = serde_json::to_string_pretty(&ast.to_json()).unwrap();
+  println!("{}", pretty_string);
 
-  // for result in &ast.statements {
-  //   println!("{:?}", result);
-  // }
+  let mut analyzer = Analyzer::new();
 
   analyzer.analyze(&mut ast.statements);
 

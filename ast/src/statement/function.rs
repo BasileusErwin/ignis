@@ -1,5 +1,6 @@
 use lexer::token::Token;
 use enums::data_type::DataType;
+use serde_json::json;
 
 use super::Statement;
 
@@ -24,6 +25,15 @@ impl FunctionParamater {
 
   pub fn to_string(&self) -> String {
     format!("{}: {}", self.name.span.literal, self.data_type.to_string())
+  }
+
+  pub fn to_json(&self) -> serde_json::Value {
+    json!({
+      "name": self.name.span.literal,
+      "data_type": self.data_type.to_string(),
+      "is_mutable": self.is_mutable,
+      "is_reference": self.is_reference,
+    })
   }
 }
 

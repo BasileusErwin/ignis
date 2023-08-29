@@ -22,7 +22,9 @@ lexer = { path = "./lexer" }
 analyzer = { path = "./analyzer" }
 evaluator = { path = "./evaluator" }
 compiler = { path = "./compiler" }
-diagnostic = { path = "./diagnostic"}
+diagnostic = { path = "./diagnostic" }
+serde = { version = "1.0.188", features = ["derive"] }
+serde_json = "1.0.105"
 
 
 [workspace]
@@ -35,5 +37,5 @@ members = [
 	"evaluator",
 	"compiler",
 	"enums",
-	"diagnostic"
+	"diagnostic",
 ]
