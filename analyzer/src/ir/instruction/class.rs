@@ -7,7 +7,7 @@ pub struct IRClass {
 }
 
 impl IRClass {
-	pub fn new(name: String, methods: Vec<IRFunction>) -> Self {
-		Self { name, methods }
-	}
+  pub fn new(name: String, methods: Vec<IRFunction>) -> Self {
+    Self { name, methods }
+  }
 }

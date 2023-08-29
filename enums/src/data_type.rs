@@ -1,6 +1,5 @@
 use super::token_type::TokenType;
 
-
 #[derive(Debug, PartialEq, Clone)]
 pub enum DataType {
   String,

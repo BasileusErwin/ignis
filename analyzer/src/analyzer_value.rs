@@ -56,15 +56,15 @@ impl AnalyzerValue {
       }
     }
   }
-  
+
   pub fn from_literation_value(value: LiteralValue) -> Self {
     match value {
-        LiteralValue::Int(i) => AnalyzerValue::Int(i),
-        LiteralValue::Double(d) => AnalyzerValue::Double(d),
-        LiteralValue::String(s) => AnalyzerValue::String(s),
-        LiteralValue::Boolean(b) => AnalyzerValue::Boolean(b),
-        LiteralValue::Null => AnalyzerValue::Null,
-        LiteralValue::Char(_) => todo!(),
+      LiteralValue::Int(i) => AnalyzerValue::Int(i),
+      LiteralValue::Double(d) => AnalyzerValue::Double(d),
+      LiteralValue::String(s) => AnalyzerValue::String(s),
+      LiteralValue::Boolean(b) => AnalyzerValue::Boolean(b),
+      LiteralValue::Null => AnalyzerValue::Null,
+      LiteralValue::Char(_) => todo!(),
     }
   }
 }

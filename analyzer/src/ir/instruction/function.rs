@@ -15,7 +15,7 @@ impl IRFunction {
     name: String,
     parameters: Vec<IRVariable>,
     return_type: DataType,
-    body: Option<Box<IRBlock>>
+    body: Option<Box<IRBlock>>,
   ) -> Self {
     Self {
       name,

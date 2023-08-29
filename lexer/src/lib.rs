@@ -338,7 +338,6 @@ impl<'a> Lexer<'a> {
   fn number(&mut self) -> bool {
     let mut is_double: bool = false;
     while self.peek().is_ascii_digit() || self.peek() == '_' {
-
       if self.peek() == '_' {
         if !self.peek_next().is_ascii_digit() || !self.peek_prev().is_ascii_digit() {
           return false;

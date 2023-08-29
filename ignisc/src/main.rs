@@ -8,18 +8,12 @@ use std::{
 use analyzer::{
   Analyzer,
   debug::{display_ir, display_block},
-  ir::instruction::{block::IRBlock, IRInstruction},
-  AnalyzerResult,
-  analyzer_error::AnalyzerDiagnosticError,
-  analyzer_value::AnalyzerValue,
 };
 use parser::Parser;
 use lexer::Lexer;
-use ast::{Ast, statement::Statement, visitor::Visitor};
+use ast::Ast;
 use diagnostic::{DiagnosticList, error::DiagnosticError};
-use evaluator::{
-  Evaluator, EvaluatorResult, evaluator_value::EvaluatorValue, execution_error::ExecutionError,
-};
+use evaluator::Evaluator;
 
 fn display_diagnostic(diagnostics: &DiagnosticList, relp: bool) {
   for diagnostic in diagnostics.diagnostics.iter() {

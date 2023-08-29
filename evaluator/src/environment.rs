@@ -86,7 +86,9 @@ impl Environment {
     if self.values.contains_key(name.span.literal.as_str()) {
       if let Some(env) = self.values.get(name.span.literal.as_str()) {
         if !env.is_mutable {
-          return Err(EvaluatorDiagnosticError::InvalidReassignedVariable(name.span.clone()));
+          return Err(EvaluatorDiagnosticError::InvalidReassignedVariable(
+            name.span.clone(),
+          ));
         }
 
         match (&value, env) {

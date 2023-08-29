@@ -6,7 +6,7 @@ pub struct IRLiteral {
 }
 
 impl IRLiteral {
-	pub fn new(value: AnalyzerValue) -> Self {
-		Self { value }
-	}
+  pub fn new(value: AnalyzerValue) -> Self {
+    Self { value }
+  }
 }
