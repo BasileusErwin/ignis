@@ -15,7 +15,7 @@ use {
     if_statement::IfStatement,
     block::Block,
     while_statement::WhileStatement,
-    function::{FunctionStatement, FunctionParamater},
+    function::{FunctionStatement, FunctionParameter},
     return_statement::Return,
   },
 };
@@ -388,7 +388,7 @@ impl Parser {
 
         self.consume(TokenType::LeftParen)?;
 
-        let mut parameters: Vec<FunctionParamater> = Vec::new();
+        let mut parameters: Vec<FunctionParameter> = Vec::new();
 
         if !self.check(TokenType::RightParen) {
           loop {
@@ -412,7 +412,7 @@ impl Parser {
             self.consume(TokenType::Colon)?;
             let token = self.advance();
 
-            parameters.push(FunctionParamater::new(
+            parameters.push(FunctionParameter::new(
               param,
               DataType::from_token_type(token.kind),
               is_mut,

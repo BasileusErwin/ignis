@@ -5,7 +5,7 @@ use serde_json::json;
 use super::Statement;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct FunctionParamater {
+pub struct FunctionParameter {
   pub name: Token,
   pub data_type: DataType,
   // TODO:
@@ -13,7 +13,7 @@ pub struct FunctionParamater {
   pub is_reference: bool,
 }
 
-impl FunctionParamater {
+impl FunctionParameter {
   pub fn new(name: Token, data_type: DataType, is_mutable: bool) -> Self {
     Self {
       name,
@@ -40,7 +40,7 @@ impl FunctionParamater {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionStatement {
   pub name: Token,
-  pub parameters: Vec<FunctionParamater>,
+  pub parameters: Vec<FunctionParameter>,
   pub body: Vec<Statement>,
   pub return_type: Option<DataType>,
 }
@@ -48,7 +48,7 @@ pub struct FunctionStatement {
 impl FunctionStatement {
   pub fn new(
     name: Token,
-    parameters: Vec<FunctionParamater>,
+    parameters: Vec<FunctionParameter>,
     body: Vec<Statement>,
     return_type: Option<DataType>,
   ) -> Self {
