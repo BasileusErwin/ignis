@@ -14,6 +14,7 @@ use analyzer::{
 use parser::Parser;
 use lexer::Lexer;
 use ast::{Ast, statement};
+use to_lua::transpile_ir_to_lua;
 use diagnostic::{DiagnosticList, error::DiagnosticError};
 use evaluator::Evaluator;
 
@@ -31,7 +32,15 @@ fn run_file(path: &str) -> Result<(), ()> {
   let mut evaluator = Evaluator::new();
 
   match fs::read_to_string(path) {
-    Ok(content) => run(content, &mut evaluator, true),
+    Ok(content) => {
+      let result = run(content, &mut evaluator, true).unwrap();
+
+      let mut path = path.split("/").collect::<Vec<&str>>();
+
+      fs::write(path.last().unwrap().replace(r"ign", "lua"), result);
+
+      return Ok(());
+    }
     Err(e) => {
       println!("{:?}", e);
       Err(())
@@ -39,11 +48,11 @@ fn run_file(path: &str) -> Result<(), ()> {
   }
 }
 
-fn run(source: String, evaluator: &mut Evaluator, relp: bool) -> Result<(), ()> {
+fn run(source: String, evaluator: &mut Evaluator, relp: bool) -> Result<String, ()> {
   let mut lexer: Lexer<'_> = Lexer::new(&source);
   lexer.scan_tokens();
 
-  lexer.display_lexer();
+  // lexer.display_lexer();
 
   let mut parser = Parser::new(lexer.tokens);
   let parser_result = parser.parse();
@@ -63,8 +72,8 @@ fn run(source: String, evaluator: &mut Evaluator, relp: bool) -> Result<(), ()> 
     }
   };
 
-  let pretty_string = serde_json::to_string_pretty(&ast.to_json()).unwrap();
-  println!("{}", pretty_string);
+  // let pretty_string = serde_json::to_string_pretty(&ast.to_json()).unwrap();
+  // println!("{}", pretty_string);
 
   let mut analyzer = Analyzer::new();
 
@@ -77,23 +86,37 @@ fn run(source: String, evaluator: &mut Evaluator, relp: bool) -> Result<(), ()> 
     );
   }
 
-  for block in &analyzer.block_stack {
-    display_block(&block.clone(), "Block", 1);
-  }
+  // for block in &analyzer.block_stack {
+  //   display_block(&block.clone(), "Block", 1);
+  // }
 
-  for ir in &analyzer.irs {
-    display_ir(ir, 1);
+  // for ir in &analyzer.irs {
+  //   display_ir(ir, 1);
+  // }
+
+  let mut code = String::new();
+
+  for ir in analyzer.irs.iter() {
+    code = code + transpile_ir_to_lua(&ir).as_str();
   }
 
   // visit(ast.statements, &mut diagnostics, evaluator);
 
   if diagnostics.diagnostics.len() > 0 {
     display_diagnostic(&diagnostics, relp);
+
+    if !relp {
+      exit(1);
+    }
+  }
+
+  if relp {
+    println!("{}", code);
   }
 
   diagnostics.clean_diagnostic();
 
-  Ok(())
+  return Ok(code);
 }
 
 fn run_prompt() -> Result<(), String> {

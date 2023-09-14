@@ -28,12 +28,25 @@ use ast::{
 use enums::data_type::{DataType, self};
 use ir::{
   instruction::{
-    IRInstruction, binary::IRBinary, logical::IRLogical, literal::IRLiteral, unary::IRUnary,
-    function::IRFunction, variable::IRVariable, block::IRBlock, assign::IRAssign,
-    ternary::IRTernary, call::IRCall, ir_if::IRIf, ir_while::IRWhile, ir_return::IRReturn,
+    IRInstruction,
+    binary::IRBinary,
+    logical::IRLogical,
+    literal::IRLiteral,
+    unary::IRUnary,
+    function::IRFunction,
+    variable::{IRVariable, IRVariableMetadata},
+    block::IRBlock,
+    assign::IRAssign,
+    ternary::IRTernary,
+    call::IRCall,
+    ir_if::IRIf,
+    ir_while::IRWhile,
+    ir_return::IRReturn,
   },
   instruction_type::IRInstructionType,
 };
+
+use crate::ir::instruction::ir_if;
 
 pub type AnalyzerResult = Result<IRInstruction, AnalyzerDiagnosticError>;
 type CheckCompatibility<T> = (bool, T);
@@ -134,11 +147,14 @@ impl Visitor<AnalyzerResult> for Analyzer {
     });
 
     if let Some(block) = env {
-      let variable = block
+      let mut variable = block
         .scopes_variables
         .iter()
         .find(|var| var.name == variable.name.span.literal)
-        .unwrap();
+        .unwrap()
+        .clone();
+
+      variable.metadata.is_declaration = false;
 
       let instruction = IRInstruction::Variable(variable.clone());
 
@@ -168,7 +184,7 @@ impl Visitor<AnalyzerResult> for Analyzer {
         .find(|var| var.name == expression.name.span.literal)
         .unwrap();
 
-      if variable.is_mutable {
+      if variable.metadata.is_mutable {
         let instruction = IRInstruction::Assign(IRAssign::new(
           expression.name.span.literal.clone(),
           Box::new(value),
@@ -222,13 +238,11 @@ impl Visitor<AnalyzerResult> for Analyzer {
     let then_branch = self.analyzer(&*expression.then_branch)?;
     let else_branch = self.analyzer(&*expression.else_branch)?;
 
-    let instruction = IRInstruction::Ternary(IRTernary::new(
+    Ok(IRInstruction::Ternary(IRTernary::new(
       Box::new(condition),
       Box::new(then_branch),
       Box::new(else_branch),
-    ));
-
-    Ok(instruction)
+    )))
   }
 
   fn visit_call_expression(&mut self, expression: &Call) -> AnalyzerResult {
@@ -258,10 +272,10 @@ impl Visitor<AnalyzerResult> for Analyzer {
     for (i, arg) in expression.arguments.iter().enumerate() {
       let arg_type = self.analyzer(&arg)?;
 
-      let kind = match arg_type {
+      let kind = match &arg_type {
         IRInstruction::Literal(l) => l.value.to_data_type(),
-        IRInstruction::Variable(v) => v.data_type,
-        IRInstruction::Function(f) => f.return_type,
+        IRInstruction::Variable(v) => v.data_type.clone(),
+        IRInstruction::Function(f) => f.return_type.clone(),
         _ => DataType::None,
       };
 
@@ -274,12 +288,12 @@ impl Visitor<AnalyzerResult> for Analyzer {
           expression.paren.clone(),
         ));
       }
+
+      arguments.push(arg_type);
     }
 
-    let instruction = IRInstruction::Call(IRCall::new(
-      Box::new(IRInstruction::Function(function)),
-      arguments,
-    ));
+    let instruction =
+      IRInstruction::Call(IRCall::new(function.name, arguments, function.return_type));
 
     Ok(instruction)
   }
@@ -307,6 +321,9 @@ impl Visitor<AnalyzerResult> for Analyzer {
         IRInstruction::Variable(variable) => {
           value = IRInstruction::Variable(variable);
         }
+        IRInstruction::Ternary(ternary) => {
+          value = IRInstruction::Ternary(ternary);
+        }
         _ => (),
       }
     }
@@ -322,31 +339,28 @@ impl Visitor<AnalyzerResult> for Analyzer {
     current_block.scopes_variables.push(IRVariable::new(
       variable.name.span.literal.clone(),
       data_type.clone(),
-      variable.is_mutable,
-      false,
       Some(Box::new(value.clone())),
+      IRVariableMetadata::new(variable.is_mutable, false, false, false, false, true),
     ));
 
-    Ok(IRInstruction::Variable(IRVariable::new(
-      variable.name.span.literal.clone(),
-      data_type,
-      false,
-      false,
-      Some(Box::new(value)),
-    )))
+    Ok(IRInstruction::Variable(
+      current_block.scopes_variables.last().unwrap().clone(),
+    ))
   }
 
   fn visit_block(&mut self, block: &Block) -> AnalyzerResult {
     self.block_stack.push(IRBlock::new(Vec::new(), Vec::new()));
+    let mut ir_block = IRBlock::new(Vec::new(), Vec::new());
 
     for statement in &block.statements {
-      self.analyze_statement(statement)?;
+      let result = self.analyze_statement(statement)?;
+      ir_block.instructions.push(result);
     }
 
     let block = self.block_stack.pop().unwrap();
 
     Ok(IRInstruction::Block(IRBlock::new(
-      self.irs.clone(),
+      ir_block.instructions.clone(),
       block.scopes_variables,
     )))
   }
@@ -388,9 +402,15 @@ impl Visitor<AnalyzerResult> for Analyzer {
       parameters.push(IRVariable::new(
         param.name.span.literal.clone(),
         param.data_type.clone(),
-        false,
-        false,
         None,
+        IRVariableMetadata::new(
+          param.is_mutable,
+          param.is_reference,
+          true,
+          false,
+          false,
+          false,
+        ),
       ));
     }
 
@@ -455,9 +475,8 @@ impl Analyzer {
       vec![IRVariable::new(
         "message".to_string(),
         DataType::None,
-        false,
-        false,
         None,
+        IRVariableMetadata::new(false, false, true, false, false, false),
       )],
       DataType::Void,
       None,
@@ -571,7 +590,7 @@ impl Analyzer {
       IRInstruction::Unary(u) => u.data_type.clone(),
       IRInstruction::Logical(_) => DataType::Boolean,
       IRInstruction::Assign(a) => self.extract_data_type(&*a.value.clone()),
-      IRInstruction::Call(c) => self.extract_data_type(&*c.callee.clone()),
+      IRInstruction::Call(c) => c.return_type.clone(),
       _ => DataType::None,
     }
   }

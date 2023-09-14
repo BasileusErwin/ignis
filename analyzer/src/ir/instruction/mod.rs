@@ -14,8 +14,6 @@ pub mod ternary;
 pub mod unary;
 pub mod variable;
 
-use enums::data_type::DataType;
-
 use self::{
   binary::IRBinary, block::IRBlock, literal::IRLiteral, unary::IRUnary, variable::IRVariable,
   logical::IRLogical, ir_if::IRIf, ir_while::IRWhile, function::IRFunction, call::IRCall,

@@ -80,10 +80,13 @@ pub fn display_ir(instruction: &IRInstruction, indent_level: usize) {
       for parameter in &f.parameters {
         println!("{}Name: {}", indent_parameter, parameter.name);
         println!("{}DataType: {:?}", indent_parameter, parameter.data_type);
-        println!("{}Is mutable: {:?}", indent_parameter, parameter.is_mutable);
+        println!(
+          "{}Is mutable: {:?}",
+          indent_parameter, parameter.metadata.is_mutable
+        );
         println!(
           "{}Is reference: {:?}",
-          indent_parameter, parameter.is_reference
+          indent_parameter, parameter.metadata.is_reference
         );
       }
 
@@ -95,8 +98,7 @@ pub fn display_ir(instruction: &IRInstruction, indent_level: usize) {
     }
     IRInstruction::Call(c) => {
       println!("{}Call:", indent);
-      display_ir(&c.callee, indent_level);
-
+      println!("{}Name: {}", indent_subtext, c.name);
       println!("{}Arguments:", indent_subtext);
 
       if c.arguments.is_empty() {
@@ -174,10 +176,13 @@ pub fn display_variable(variable: &IRVariable, indent_level: usize) {
   println!("{}Variable:", indent);
   println!("{}Name: {}", indent_subtext, variable.name);
   println!("{}DataType: {:?}", indent_subtext, variable.data_type);
-  println!("{}Is mutable: {:?}", indent_subtext, variable.is_mutable);
+  println!(
+    "{}Is mutable: {:?}",
+    indent_subtext, variable.metadata.is_mutable
+  );
   println!(
     "{}Is reference: {:?}",
-    indent_subtext, variable.is_reference
+    indent_subtext, variable.metadata.is_reference
   );
 
   if let Some(value) = &variable.value {

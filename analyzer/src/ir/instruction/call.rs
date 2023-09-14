@@ -1,13 +1,20 @@
+use enums::data_type::DataType;
+
 use super::IRInstruction;
 
 #[derive(Debug, Clone)]
 pub struct IRCall {
-  pub callee: Box<IRInstruction>,
+  pub name: String,
   pub arguments: Vec<IRInstruction>,
+  pub return_type: DataType,
 }
 
 impl IRCall {
-  pub fn new(callee: Box<IRInstruction>, arguments: Vec<IRInstruction>) -> Self {
-    Self { callee, arguments }
+  pub fn new(name: String, arguments: Vec<IRInstruction>, return_type: DataType) -> Self {
+    Self {
+      name,
+      arguments,
+      return_type,
+    }
   }
 }

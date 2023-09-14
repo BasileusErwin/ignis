@@ -207,7 +207,7 @@ impl<'a> Lexer<'a> {
           }
         }
 
-        if self.is_identifier_starter() {
+        if c.is_ascii_lowercase() || c.is_ascii_uppercase() || c == '_' {
           token = self.identifier();
         }
       }
@@ -261,18 +261,18 @@ impl<'a> Lexer<'a> {
   fn is_identifier_starter(&self) -> bool {
     let c: char = self.peek();
 
-    (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_')
+    c.is_ascii_lowercase() || c.is_ascii_uppercase() || c == '_'
   }
 
   fn is_identifier_letter(&self) -> bool {
     let c: char = self.peek();
 
-    (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_')
+    c.is_ascii_digit() || c.is_ascii_lowercase() || c.is_ascii_uppercase() || c == '_'
   }
 
   // TODO: Fix var with only one character
   fn identifier(&mut self) -> TokenType {
-    while self.is_identifier_starter() || self.is_identifier_letter() {
+    while self.is_identifier_letter() {
       self.advance();
     }
 

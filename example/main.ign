@@ -1,9 +1,13 @@
 function main(): void {
-	let helloWorld: string = "Hello World";
-	let num: int = 10 + 3;
+	let a: int = 1;
+	let b: int = 2;
+	let mut c: int = a + b;
 	
-	println(helloWorld);
-	println(num);
+	while(c < 100) {
+		c = c + b;
+	}
+		
+	println(c);
 }
 
 main();
