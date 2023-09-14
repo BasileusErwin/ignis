@@ -1,3 +1,5 @@
+use serde_json::json;
+
 use self::{
   binary::Binary, grouping::Grouping, literal::Literal, unary::Unary, variable::VariableExpression,
   logical::Logical, assign::Assign, ternary::Ternary, call::Call,
@@ -29,7 +31,7 @@ pub enum Expression {
 }
 
 impl Expression {
-  pub fn accept<R>(&self, visitor: &dyn Visitor<R>) -> R {
+  pub fn accept<R>(&self, visitor: &mut dyn Visitor<R>) -> R {
     match self {
       Expression::Grouping(grouping) => visitor.visit_grouping_expression(grouping),
       Expression::Binary(binary) => visitor.visit_binary_expression(binary),
@@ -40,6 +42,80 @@ impl Expression {
       Expression::Logical(logical) => visitor.visit_logical_expression(logical),
       Expression::Ternary(ternary) => visitor.visit_ternary_expression(ternary),
       Expression::Call(call) => visitor.visit_call_expression(call),
+    }
+  }
+
+  pub fn to_json(&self) -> serde_json::Value {
+    match self {
+      Expression::Binary(binary) => {
+        json!({
+          "type": "Binary",
+          "left": binary.left.to_json(),
+          "operator": binary.operator.span.literal,
+          "right": binary.right.to_json(),
+        })
+      }
+      Expression::Grouping(grouping) => {
+        json!({
+          "type": "Grouping",
+          "expression": grouping.expression.to_json(),
+        })
+      }
+      Expression::Literal(literal) => {
+        json!({
+          "type": "Literal",
+          "value": literal.value.to_string(),
+        })
+      }
+      Expression::Unary(unary) => {
+        json!({
+          "type": "Unary",
+          "operator": unary.operator.span.literal,
+          "right": unary.right.to_json(),
+          "data_type": unary.data_type.to_string(),
+        })
+      }
+      Expression::Variable(variable) => {
+        json!({
+          "type": "Variable",
+          "name": variable.name.span.literal,
+          "data_type": variable.data_type.to_string(),
+        })
+      }
+      Expression::Assign(assign) => {
+        json!({
+          "type": "Assign",
+          "name": assign.name.span.literal,
+          "value": assign.value.to_json(),
+          "data_type": assign.data_type.to_string(),
+        })
+      }
+      Expression::Logical(logical) => {
+        json!({
+          "type": "Logical",
+          "left": logical.left.to_json(),
+          "operator": logical.operator.span.literal,
+          "right": logical.right.to_json(),
+          "data_type": logical.data_type.to_string(),
+        })
+      }
+      Expression::Ternary(ternary) => {
+        json!({
+          "type": "Ternary",
+          "condition": ternary.condition.to_json(),
+          "then_branch": ternary.then_branch.to_json(),
+          "else_branch": ternary.else_branch.to_json(),
+          "data_type": ternary.data_type.to_string(),
+        })
+      }
+      Expression::Call(call) => {
+        json!({
+          "type": "Call",
+          "callee": call.callee.to_json(),
+          "arguments": call.arguments.iter().map(|x| x.to_json()).collect::<Vec<serde_json::Value>>(),
+          "return_type": call.return_type.to_string(),
+        })
+      }
     }
   }
 

@@ -1,14 +1,11 @@
 use std::{cell::RefCell, rc::Rc};
 
-
 use crate::{
-  environment::Environment, Evaluator, EvaluatorResult, EvaluatorValue, evaluator_error::EvaluatorDiagnosticError, execution_error::ExecutionError,
+  environment::Environment, Evaluator, EvaluatorResult, EvaluatorValue,
+  evaluator_error::EvaluatorDiagnosticError, execution_error::ExecutionError,
 };
 
-use {
-  ast::statement::function::FunctionStatement,
-  enums::data_type::DataType,
-};
+use {ast::statement::function::FunctionStatement, enums::data_type::DataType};
 
 use super::Callable;
 

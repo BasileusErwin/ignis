@@ -1,4 +1,3 @@
-
 use enums::data_type::DataType;
 
 use super::Expression;

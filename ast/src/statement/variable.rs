@@ -7,7 +7,7 @@ use crate::expression::Expression;
 pub struct Variable {
   pub name: Box<Token>,
   pub initializer: Option<Box<Expression>>,
-  pub type_annotation: Box<DataType>,
+  pub type_annotation: DataType,
   pub is_mutable: bool,
 }
 
@@ -15,7 +15,7 @@ impl Variable {
   pub fn new(
     name: Box<Token>,
     initializer: Option<Box<Expression>>,
-    type_annotation: Box<DataType>,
+    type_annotation: DataType,
     is_mutable: bool,
   ) -> Self {
     Self {

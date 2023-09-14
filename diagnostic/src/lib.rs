@@ -3,13 +3,11 @@ pub mod warning;
 
 use std::fmt::Display;
 
-use parser::ParserDiagnosticError;
-
 use {
   lexer::{text_span::TextSpan, token::Token},
   ast::expression::variable::VariableExpression,
   enums::{data_type::DataType, token_type::TokenType},
-  evaluator::evaluator_value::EvaluatorValue,
+  analyzer::analyzer_value::AnalyzerValue,
 };
 
 #[derive(Debug)]
@@ -150,8 +148,8 @@ impl DiagnosticList {
   pub fn report_invalid_operator_for_data_type(
     &mut self,
     operator: &Token,
-    left: &EvaluatorValue,
-    right: &EvaluatorValue,
+    left: &AnalyzerValue,
+    right: &AnalyzerValue,
   ) {
     self.report_error(
       format!(
@@ -167,7 +165,7 @@ impl DiagnosticList {
   pub fn report_invalid_unary_operator_for_data_type(
     &mut self,
     operator: &Token,
-    right: &EvaluatorValue,
+    right: &AnalyzerValue,
   ) {
     self.report_error(
       format!(
@@ -258,7 +256,7 @@ impl DiagnosticList {
     self.report_error(format!("Missing argument '{}'", name), token.span.clone());
   }
 
-  fn report_invalid_argument_type(&mut self, argument: &EvaluatorValue) {
+  fn report_invalid_argument_type(&mut self, argument: &AnalyzerValue) {
     self.report_error(
       format!("Invalid argument type '{}'", argument.to_string()),
       TextSpan::new(0, 0, 0, argument.to_string(), 0),
@@ -267,9 +265,9 @@ impl DiagnosticList {
 
   fn report_invalid_comparison(
     &mut self,
-    left: &&EvaluatorValue,
-    right: &&EvaluatorValue,
-    token: &&Token,
+    left: &AnalyzerValue,
+    right: &AnalyzerValue,
+    token: &Token,
   ) {
     self.report_error(
       format!(
@@ -303,6 +301,113 @@ impl DiagnosticList {
         data_type.to_string()
       ),
       TextSpan::new(0, 0, 0, name.to_string(), 0),
+    );
+  }
+
+  fn report_type_mismatch(&mut self, expected: &DataType, found: &DataType, token: &Token) {
+    self.report_error(
+      format!(
+        "Type mismatch, expected '{}', found '{}'",
+        expected.to_string(),
+        found.to_string()
+      ),
+      token.span.clone(),
+    );
+  }
+
+  fn report_type_mismatch_unary(&mut self, right: &DataType, token: &Token) {
+    self.report_error(
+      format!("Type mismatch, expected '{}'", right.to_string()),
+      token.span.clone(),
+    );
+  }
+
+  fn report_cannot_subtract(&mut self, left: &AnalyzerValue, right: &AnalyzerValue, token: &Token) {
+    self.report_error(
+      format!(
+        "Cannot subtract '{}' from '{}'",
+        right.to_string(),
+        left.to_string()
+      ),
+      token.span.clone(),
+    );
+  }
+
+  fn report_cannot_multiply(&mut self, left: &AnalyzerValue, right: &AnalyzerValue, token: &Token) {
+    self.report_error(
+      format!(
+        "Cannot multiply '{}' with '{}'",
+        left.to_string(),
+        right.to_string()
+      ),
+      token.span.clone(),
+    );
+  }
+
+  fn report_cannot_divide(&mut self, left: &AnalyzerValue, right: &AnalyzerValue, token: &Token) {
+    self.report_error(
+      format!(
+        "Cannot divide '{}' with '{}'",
+        left.to_string(),
+        right.to_string()
+      ),
+      token.span.clone(),
+    );
+  }
+
+  fn report_argument_type_mismatch(
+    &mut self,
+    expected: &DataType,
+    recived: &DataType,
+    token: &Token,
+  ) {
+    self.report_error(
+      format!(
+        "Argument type mismatch, expected '{}', found '{}'",
+        expected.to_string(),
+        recived.to_string()
+      ),
+      token.span.clone(),
+    );
+  }
+
+  fn report_class_already_defined(&mut self, name: &str) {
+    self.report_error(
+      format!("Class '{}' was already defined", name),
+      TextSpan::new(0, 0, 0, name.to_string(), 0),
+    );
+  }
+
+  fn report_function_already_defined(&mut self, name: &str) {
+    self.report_error(
+      format!("Function '{}' was already defined", name),
+      TextSpan::new(0, 0, 0, name.to_string(), 0),
+    );
+  }
+
+  fn report_cannot_modulo(&mut self, left: &AnalyzerValue, right: &AnalyzerValue, token: &Token) {
+    self.report_error(
+      format!(
+        "Cannot modulo '{}' with '{}'",
+        left.to_string(),
+        right.to_string()
+      ),
+      token.span.clone(),
+    );
+  }
+
+  fn report_immutable_variable_as_mutable_parameter(
+    &mut self,
+    parameter_name: &str,
+    variable_name: &str,
+    token: &&Token,
+  ) {
+    self.report_error(
+      format!(
+        "Cannot use immutable variable '{}' as mutable parameter '{}'",
+        variable_name, parameter_name
+      ),
+      token.span.clone(),
     );
   }
 }

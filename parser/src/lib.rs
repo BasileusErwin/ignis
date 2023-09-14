@@ -2,12 +2,12 @@ use enums::{data_type::DataType, token_type::TokenType};
 use lexer::text_span::TextSpan;
 
 use {
-  lexer::token::Token ,
+  lexer::token::Token,
   ast::expression::{
     Expression, binary::Binary, unary::Unary, literal::Literal, grouping::Grouping,
     logical::Logical, assign::Assign, variable::VariableExpression, ternary, call::Call,
   },
-  enums::literal_value::LiteralValue,
+  enums::{literal_value::LiteralValue, function_kind::FunctionKind},
   ast::statement::{
     Statement,
     variable::Variable,
@@ -15,7 +15,7 @@ use {
     if_statement::IfStatement,
     block::Block,
     while_statement::WhileStatement,
-    function::{FunctionStatement, FunctionParamater},
+    function::{FunctionStatement, FunctionParameter},
     return_statement::Return,
   },
 };
@@ -34,15 +34,6 @@ pub enum ParserDiagnosticError {
 }
 
 type ParserResult<T> = Result<T, ParserDiagnosticError>;
-
-#[derive(Debug)]
-pub enum FunctionKind {
-  Function,
-  // TODO:
-  Method,
-  Initializer,
-  Lambda,
-}
 
 pub struct Parser {
   pub tokens: Vec<Token>,
@@ -159,7 +150,7 @@ impl Parser {
   fn factor(&mut self) -> ParserResult<Expression> {
     let mut expression: Expression = self.unary()?;
 
-    while self.match_token(&[TokenType::Slash, TokenType::Asterisk]) {
+    while self.match_token(&[TokenType::Slash, TokenType::Asterisk, TokenType::Mod]) {
       let operator: Token = self.previous();
       let right: Expression = self.unary()?;
 
@@ -223,10 +214,9 @@ impl Parser {
       | TokenType::Double
       | TokenType::String => {
         self.advance();
-        Ok(Expression::Literal(Literal::new(LiteralValue::from_token_type(
-          token.kind.clone(),
-          token.span.literal.clone(),
-        ))))
+        Ok(Expression::Literal(Literal::new(
+          LiteralValue::from_token_type(token.kind.clone(), token.span.literal.clone()),
+        )))
       }
       TokenType::LeftParen => {
         self.advance();
@@ -375,7 +365,7 @@ impl Parser {
     }
   }
 
-  fn return_statement(&mut self) -> Result<Statement,ParserDiagnosticError> {
+  fn return_statement(&mut self) -> Result<Statement, ParserDiagnosticError> {
     let keyword = self.previous();
 
     if self.check(TokenType::SemiColon) {
@@ -398,7 +388,7 @@ impl Parser {
 
         self.consume(TokenType::LeftParen)?;
 
-        let mut parameters: Vec<FunctionParamater> = Vec::new();
+        let mut parameters: Vec<FunctionParameter> = Vec::new();
 
         if !self.check(TokenType::RightParen) {
           loop {
@@ -410,14 +400,22 @@ impl Parser {
               ));
             }
 
+            let is_mut: bool = if self.peek().kind == TokenType::Mut {
+              self.advance();
+              true
+            } else {
+              false
+            };
+
             let param = self.consume(TokenType::Identifier)?;
 
             self.consume(TokenType::Colon)?;
             let token = self.advance();
 
-            parameters.push(FunctionParamater::new(
+            parameters.push(FunctionParameter::new(
               param,
               DataType::from_token_type(token.kind),
+              is_mut,
             ));
 
             if !self.match_token(&[TokenType::Comma]) {
@@ -513,7 +511,7 @@ impl Parser {
       Ok(Statement::Variable(Variable::new(
         Box::new(name),
         Some(Box::new(ini)),
-        Box::new(type_annotation),
+        type_annotation,
         mutable,
       )))
     } else {
@@ -687,18 +685,24 @@ impl Parser {
     }
 
     let error = match kind {
-      TokenType::SemiColon =>ParserDiagnosticError::UnexpectedToken(TokenType::SemiColon, token.clone()),
-      TokenType::Colon =>ParserDiagnosticError::UnexpectedToken(TokenType::Colon, token.clone()),
-      TokenType::Identifier =>ParserDiagnosticError::ExpectedVariableName(token.clone()),
+      TokenType::SemiColon => {
+        ParserDiagnosticError::UnexpectedToken(TokenType::SemiColon, token.clone())
+      }
+      TokenType::Colon => ParserDiagnosticError::UnexpectedToken(TokenType::Colon, token.clone()),
+      TokenType::Identifier => ParserDiagnosticError::ExpectedVariableName(token.clone()),
       TokenType::QuestionMark => {
-       ParserDiagnosticError::ExpectedToken(TokenType::QuestionMark, token.clone())
+        ParserDiagnosticError::ExpectedToken(TokenType::QuestionMark, token.clone())
       }
       TokenType::LeftParen | TokenType::RightParen => {
         let expression = self.previous();
 
-       ParserDiagnosticError::ExpectedAfterExpression(kind.clone(), expression.clone(), token.clone())
+        ParserDiagnosticError::ExpectedAfterExpression(
+          kind.clone(),
+          expression.clone(),
+          token.clone(),
+        )
       }
-      _ =>ParserDiagnosticError::ExpectedToken(kind.clone(), token.clone()),
+      _ => ParserDiagnosticError::ExpectedToken(kind.clone(), token.clone()),
     };
 
     return Err(error);
