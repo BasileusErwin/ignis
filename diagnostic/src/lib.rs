@@ -395,4 +395,19 @@ impl DiagnosticList {
       token.span.clone(),
     );
   }
+
+  fn report_immutable_variable_as_mutable_parameter(
+    &mut self,
+    parameter_name: &str,
+    variable_name: &str,
+    token: &&Token,
+  ) {
+    self.report_error(
+      format!(
+        "Cannot use immutable variable '{}' as mutable parameter '{}'",
+        variable_name, parameter_name
+      ),
+      token.span.clone(),
+    );
+  }
 }

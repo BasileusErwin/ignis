@@ -289,6 +289,21 @@ impl Visitor<AnalyzerResult> for Analyzer {
         ));
       }
 
+      match &arg_type {
+        IRInstruction::Variable(v) => {
+          if !v.metadata.is_mutable && function.parameters[i].metadata.is_mutable {
+            return Err(
+              AnalyzerDiagnosticError::ImmutableVariableAsMutableParameter(
+                function.parameters[i].name.clone(),
+                v.name.clone(),
+                expression.paren.clone(),
+              ),
+            );
+          }
+        }
+        _ => (),
+      };
+
       arguments.push(arg_type);
     }
 
@@ -323,6 +338,15 @@ impl Visitor<AnalyzerResult> for Analyzer {
         }
         IRInstruction::Ternary(ternary) => {
           value = IRInstruction::Ternary(ternary);
+        }
+        IRInstruction::Call(call) => {
+          value = IRInstruction::Call(call);
+        }
+        IRInstruction::Class(class) => {
+          value = IRInstruction::Class(class);
+        }
+        IRInstruction::Logical(logical) => {
+          value = IRInstruction::Logical(logical);
         }
         _ => (),
       }
@@ -692,6 +716,13 @@ impl Analyzer {
       }
       IRInstructionType::And | IRInstructionType::Or => {
         self.check_logical_compatibility(&left_type, &right_type)
+      }
+      IRInstructionType::Mod => {
+        if left_type == DataType::Int && right_type == DataType::Int {
+          (true, DataType::Int)
+        } else {
+          (false, DataType::None)
+        }
       }
       _ => (false, DataType::None),
     }

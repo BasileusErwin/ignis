@@ -1,4 +1,5 @@
 use enums::token_type::TokenType;
+use lexer::token::Token;
 
 #[derive(Debug, Clone)]
 pub enum IRInstructionType {
@@ -18,6 +19,7 @@ pub enum IRInstructionType {
   Assign,
   AssignAdd,
   AssignSub,
+  Mod,
 }
 
 impl IRInstructionType {
@@ -39,6 +41,7 @@ impl IRInstructionType {
       IRInstructionType::Assign => String::from("assign"),
       IRInstructionType::AssignAdd => String::from("assign_add"),
       IRInstructionType::AssignSub => String::from("assign_sub"),
+      IRInstructionType::Mod => String::from("mod"),
     }
   }
 
@@ -52,6 +55,7 @@ impl IRInstructionType {
       TokenType::Greater => IRInstructionType::Greater,
       TokenType::LessEqual => IRInstructionType::LessEqual,
       TokenType::Less => IRInstructionType::Less,
+      TokenType::Mod => IRInstructionType::Mod,
       TokenType::EqualEqual => IRInstructionType::Equal,
       TokenType::BangEqual => IRInstructionType::NotEqual,
       TokenType::And => IRInstructionType::And,

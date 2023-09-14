@@ -7,6 +7,7 @@ use {
 };
 
 use analyzer::analyzer_value::AnalyzerValue;
+use enums::data_type;
 
 use super::DiagnosticList;
 
@@ -23,7 +24,7 @@ pub enum DiagnosticError {
   InvalidAssignmentTarget(TextSpan),
   ExpectedTypeAfterVariable(Token),
 
-  // Analyzer | Analizer
+  // Analyzer | Evaluator
   UndeclaredVariable(VariableExpression),
   InvalidUnaryOperatorForDataType(Token, AnalyzerValue),
   NotCallable(Token),
@@ -46,6 +47,7 @@ pub enum DiagnosticError {
   FunctionAlreadyDefined(String),
   ClassAlreadyDefined(String),
   ArgumentTypeMismatch(DataType, DataType, Token),
+  ImmutableVariableAsMutableParameter(String, String, Token),
 }
 
 impl DiagnosticError {
@@ -115,6 +117,13 @@ impl DiagnosticError {
       }
       AnalyzerDiagnosticError::TypeMismatchUnary(right, token) => {
         DiagnosticError::TypeMismatchUnary(right, token)
+      }
+      AnalyzerDiagnosticError::ImmutableVariableAsMutableParameter(
+        parameter_name,
+        variable_name,
+        token,
+      ) => {
+        DiagnosticError::ImmutableVariableAsMutableParameter(parameter_name, variable_name, token)
       }
     }
   }
@@ -259,6 +268,9 @@ impl DiagnosticError {
       DiagnosticError::TypeMismatchUnary(right, token) => {
         diagnostics.report_type_mismatch_unary(&right, &token);
       }
+        DiagnosticError::ImmutableVariableAsMutableParameter(parameter_name, variable_name, token) => {
+        diagnostics.report_immutable_variable_as_mutable_parameter(&parameter_name, &variable_name, &token);
+        }
     }
   }
 }

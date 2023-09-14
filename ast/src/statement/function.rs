@@ -14,11 +14,11 @@ pub struct FunctionParamater {
 }
 
 impl FunctionParamater {
-  pub fn new(name: Token, data_type: DataType) -> Self {
+  pub fn new(name: Token, data_type: DataType, is_mutable: bool) -> Self {
     Self {
       name,
       data_type,
-      is_mutable: false,
+      is_mutable,
       is_reference: false,
     }
   }

@@ -97,7 +97,7 @@ fn run(source: String, evaluator: &mut Evaluator, relp: bool) -> Result<String, 
   let mut code = String::new();
 
   for ir in analyzer.irs.iter() {
-    code = code + transpile_ir_to_lua(&ir).as_str();
+    code = code + transpile_ir_to_lua(&ir, 0).as_str();
   }
 
   // visit(ast.statements, &mut diagnostics, evaluator);

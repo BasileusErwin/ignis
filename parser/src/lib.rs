@@ -150,7 +150,7 @@ impl Parser {
   fn factor(&mut self) -> ParserResult<Expression> {
     let mut expression: Expression = self.unary()?;
 
-    while self.match_token(&[TokenType::Slash, TokenType::Asterisk]) {
+    while self.match_token(&[TokenType::Slash, TokenType::Asterisk, TokenType::Mod]) {
       let operator: Token = self.previous();
       let right: Expression = self.unary()?;
 
@@ -400,6 +400,13 @@ impl Parser {
               ));
             }
 
+            let is_mut: bool = if self.peek().kind == TokenType::Mut {
+              self.advance();
+              true
+            } else {
+              false
+            };
+
             let param = self.consume(TokenType::Identifier)?;
 
             self.consume(TokenType::Colon)?;
@@ -408,6 +415,7 @@ impl Parser {
             parameters.push(FunctionParamater::new(
               param,
               DataType::from_token_type(token.kind),
+              is_mut,
             ));
 
             if !self.match_token(&[TokenType::Comma]) {
