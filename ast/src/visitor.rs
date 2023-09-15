@@ -1,7 +1,8 @@
 use crate::{
   expression::{
     binary::Binary, literal::Literal, unary::Unary, grouping::Grouping,
-    variable::VariableExpression, assign::Assign, logical::Logical, ternary::Ternary, call::Call, array::Array,
+    variable::VariableExpression, assign::Assign, logical::Logical, ternary::Ternary, call::Call,
+    array::Array,
   },
   statement::{
     expression::ExpressionStatement, variable::Variable, if_statement::IfStatement, block::Block,

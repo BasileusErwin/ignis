@@ -293,12 +293,12 @@ impl DiagnosticError {
       DiagnosticError::ReturnOutsideFunction(token) => {
         diagnostics.report_return_outside_function(&token);
       }
-        DiagnosticError::NotIterable(token) => {
-          diagnostics.report_not_iterable(token);
-        }
-        DiagnosticError::ArrayElementTypeMismatch(token) => {
-          diagnostics.report_array_element_type_mismatch(token);
-        }
+      DiagnosticError::NotIterable(token) => {
+        diagnostics.report_not_iterable(token);
+      }
+      DiagnosticError::ArrayElementTypeMismatch(token) => {
+        diagnostics.report_array_element_type_mismatch(token);
+      }
     }
   }
 }

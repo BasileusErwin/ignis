@@ -10,9 +10,6 @@ pub struct Class {
 
 impl Class {
   pub fn new(name: Token, methods: Vec<FunctionStatement>) -> Self {
-    Self {
-      name,
-      methods,
-    }
+    Self { name, methods }
   }
 }

@@ -4,6 +4,7 @@ pub mod block;
 pub mod call;
 pub mod class;
 pub mod function;
+pub mod ir_array;
 pub mod ir_for_in;
 pub mod ir_if;
 pub mod ir_println;
@@ -14,12 +15,12 @@ pub mod logical;
 pub mod ternary;
 pub mod unary;
 pub mod variable;
-pub mod ir_array;
 
 use self::{
   binary::IRBinary, block::IRBlock, literal::IRLiteral, unary::IRUnary, variable::IRVariable,
   logical::IRLogical, ir_if::IRIf, ir_while::IRWhile, function::IRFunction, call::IRCall,
-  class::IRClass, assign::IRAssign, ir_return::IRReturn, ternary::IRTernary, ir_for_in::IRForIn, ir_array::IRArray,
+  class::IRClass, assign::IRAssign, ir_return::IRReturn, ternary::IRTernary, ir_for_in::IRForIn,
+  ir_array::IRArray,
 };
 
 #[derive(Debug, Clone)]
@@ -39,5 +40,5 @@ pub enum IRInstruction {
   Class(IRClass),
   Ternary(IRTernary),
   ForIn(IRForIn),
-  Array(IRArray)
+  Array(IRArray),
 }
