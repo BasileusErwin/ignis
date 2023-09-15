@@ -227,5 +227,39 @@ pub fn transpile_ir_to_lua(instruction: &IRInstruction, indent_level: usize) -> 
 
       format!("{} and {} or {}", condition, then_branch, else_branch)
     }
+    IRInstruction::ForIn(for_in) => {
+      let mut code = String::new();
+
+      code.push_str(&format!(
+        "{}for _, {} in pairs({}) do\n",
+        " ".repeat(indent_level),
+        for_in.variable.name,
+        transpile_ir_to_lua(&for_in.iterable, indent_level)
+      ));
+
+      code.push_str(&transpile_ir_to_lua(&for_in.body, indent_level + 2));
+
+      code.push_str(format!("{}end\n", " ".repeat(indent_level)).as_str());
+
+      code
+    }
+    IRInstruction::Array(array) => {
+      let mut code = String::new();
+
+      code.push_str(&format!(
+        "{}{{{}",
+        " ".repeat(indent_level),
+        array
+          .elements
+          .iter()
+          .map(|x| transpile_ir_to_lua(x, indent_level + 2))
+          .collect::<Vec<String>>()
+          .join(", ")
+      ));
+
+      code.push_str("}\n");
+
+      return code;
+    }
   }
 }

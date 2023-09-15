@@ -1,12 +1,12 @@
 use crate::{
   expression::{
     binary::Binary, literal::Literal, unary::Unary, grouping::Grouping,
-    variable::VariableExpression, assign::Assign, logical::Logical, ternary::Ternary, call::Call,
+    variable::VariableExpression, assign::Assign, logical::Logical, ternary::Ternary, call::Call, array::Array,
   },
   statement::{
     expression::ExpressionStatement, variable::Variable, if_statement::IfStatement, block::Block,
     while_statement::WhileStatement, function::FunctionStatement, return_statement::Return,
-    class::Class,
+    class::Class, for_in::ForIn,
   },
 };
 
@@ -21,6 +21,7 @@ pub trait Visitor<R> {
   fn visit_logical_expression(&mut self, expression: &Logical) -> R;
   fn visit_ternary_expression(&mut self, expression: &Ternary) -> R;
   fn visit_call_expression(&mut self, expression: &Call) -> R;
+  fn visit_array_expression(&mut self, expression: &Array) -> R;
 
   // Statements
   fn visit_expression_statement(&mut self, statement: &ExpressionStatement) -> R;
@@ -31,4 +32,5 @@ pub trait Visitor<R> {
   fn visit_function_statement(&mut self, statement: &FunctionStatement) -> R;
   fn visit_return_statement(&mut self, statement: &Return) -> R;
   fn visit_class_statement(&mut self, statement: &Class) -> R;
+  fn visit_for_in_statement(&mut self, statement: &ForIn) -> R;
 }

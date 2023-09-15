@@ -1,8 +1,8 @@
 class User {
-	public firstName: string;
-	public lastName: string;
+	private firstName: string;
+	private lastName: string;
 	
-	User(firstName: string, lastName: string) {
+	public User(firstName: string, lastName: string) {
 		this.firstName = firstName;
 		this.lastName = lastName;
 	}
@@ -17,5 +17,3 @@ function main(): void {
 	
 	println("Full Name: " + user.getFullName());
 }
-
-main();

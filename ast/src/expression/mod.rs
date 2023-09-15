@@ -2,11 +2,12 @@ use serde_json::json;
 
 use self::{
   binary::Binary, grouping::Grouping, literal::Literal, unary::Unary, variable::VariableExpression,
-  logical::Logical, assign::Assign, ternary::Ternary, call::Call,
+  logical::Logical, assign::Assign, ternary::Ternary, call::Call, array::Array,
 };
 
 use super::visitor::Visitor;
 
+pub mod array;
 pub mod assign;
 pub mod binary;
 pub mod call;
@@ -28,6 +29,7 @@ pub enum Expression {
   Logical(Logical),
   Ternary(Ternary),
   Call(Call),
+  Array(Array),
 }
 
 impl Expression {
@@ -42,6 +44,7 @@ impl Expression {
       Expression::Logical(logical) => visitor.visit_logical_expression(logical),
       Expression::Ternary(ternary) => visitor.visit_ternary_expression(ternary),
       Expression::Call(call) => visitor.visit_call_expression(call),
+      Expression::Array(array) => visitor.visit_array_expression(array),
     }
   }
 
@@ -114,6 +117,13 @@ impl Expression {
           "callee": call.callee.to_json(),
           "arguments": call.arguments.iter().map(|x| x.to_json()).collect::<Vec<serde_json::Value>>(),
           "return_type": call.return_type.to_string(),
+        })
+      }
+      Expression::Array(array) => {
+        json!({
+          "type": "Array",
+          "elements": array.elements.iter().map(|x| x.to_json()).collect::<Vec<serde_json::Value>>(),
+          "data_type": array.data_type.to_string(),
         })
       }
     }
@@ -189,6 +199,17 @@ impl Expression {
           .collect::<Vec<String>>()
           .join(", ")
       ),
+      Expression::Array(array) => {
+        format!(
+          "[{}]",
+          array
+            .elements
+            .iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<String>>()
+            .join(", ")
+        )
+      }
     }
   }
 }

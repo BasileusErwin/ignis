@@ -1,5 +1,5 @@
 // TODO:
-let sum: Arrow<int, int, int> = (num1, num2) -> num1 + num2;
+let sum = (num1: int, num2: int): int -> num1 + num2;
 
 let result: int = sum(2, 3);
 

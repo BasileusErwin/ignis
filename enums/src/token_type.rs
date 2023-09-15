@@ -33,7 +33,7 @@ pub enum TokenType {
   LessEqual,    // <=
   Or,           // ||
   And,          // &&
-  Arrow,        // =>
+  Arrow,        // ->
   Increment,    // +=
   Decrement,    // -=
 

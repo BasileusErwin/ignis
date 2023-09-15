@@ -7,6 +7,7 @@ use {
 };
 
 use analyzer::analyzer_value::AnalyzerValue;
+use ast::expression::{Expression, self};
 use enums::data_type;
 
 use super::DiagnosticList;
@@ -49,6 +50,8 @@ pub enum DiagnosticError {
   ArgumentTypeMismatch(DataType, DataType, Token),
   ImmutableVariableAsMutableParameter(String, String, Token),
   ReturnOutsideFunction(Token),
+  NotIterable(Token),
+  ArrayElementTypeMismatch(Token),
 }
 
 impl DiagnosticError {
@@ -128,6 +131,10 @@ impl DiagnosticError {
       }
       AnalyzerDiagnosticError::ReturnOutsideFunction(token) => {
         DiagnosticError::ReturnOutsideFunction(token)
+      }
+      AnalyzerDiagnosticError::NotIterable(token) => DiagnosticError::NotIterable(token),
+      AnalyzerDiagnosticError::ArrayElementTypeMismatch(token) => {
+        DiagnosticError::ArrayElementTypeMismatch(token)
       }
     }
   }
@@ -286,6 +293,12 @@ impl DiagnosticError {
       DiagnosticError::ReturnOutsideFunction(token) => {
         diagnostics.report_return_outside_function(&token);
       }
+        DiagnosticError::NotIterable(token) => {
+          diagnostics.report_not_iterable(token);
+        }
+        DiagnosticError::ArrayElementTypeMismatch(token) => {
+          diagnostics.report_array_element_type_mismatch(token);
+        }
     }
   }
 }

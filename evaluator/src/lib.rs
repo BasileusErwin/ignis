@@ -360,6 +360,20 @@ impl Visitor<EvaluatorResult<EvaluatorValue>> for Evaluator {
   ) -> EvaluatorResult<EvaluatorValue> {
     todo!()
   }
+
+  fn visit_array_expression(
+    &mut self,
+    expression: &ast::expression::array::Array,
+  ) -> EvaluatorResult<EvaluatorValue> {
+    todo!()
+  }
+
+  fn visit_for_in_statement(
+    &mut self,
+    statement: &ast::statement::for_in::ForIn,
+  ) -> EvaluatorResult<EvaluatorValue> {
+    todo!()
+  }
 }
 
 impl Evaluator {

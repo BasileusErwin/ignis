@@ -133,6 +133,29 @@ pub fn display_ir(instruction: &IRInstruction, indent_level: usize) {
       println!("{}Else:", indent_level);
       display_ir(&t.else_branch, indent_level);
     }
+    IRInstruction::ForIn(for_in) => {
+      println!("{}ForIn:", indent);
+      println!("{}Variable:", indent_subtext);
+      display_variable(&for_in.variable, indent_level);
+
+      println!("{}Iterable:", indent_subtext);
+      display_ir(&for_in.iterable, indent_level);
+
+      println!("{}Body:", indent_subtext);
+      display_ir(&for_in.body, indent_level);
+    }
+    IRInstruction::Array(array) => {
+      println!("{}Array:", indent);
+      println!("{}Elements:", indent_subtext);
+
+      if array.elements.is_empty() {
+        println!("{}Empty", indent_subtext.repeat(2));
+      } else {
+        for element in &array.elements {
+          display_ir(element, indent_level);
+        }
+      }
+    }
   };
 }
 

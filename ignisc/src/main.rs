@@ -3,6 +3,7 @@ use std::{
   env,
   process::exit,
   fs,
+  fmt::format,
 };
 
 use serde_json;
@@ -32,15 +33,18 @@ fn run_file(path: &str) -> Result<(), ()> {
   let mut evaluator = Evaluator::new();
 
   match fs::read_to_string(path) {
-    Ok(content) => {
-      let result = run(content, &mut evaluator, true).unwrap();
+    Ok(content) => match run(content, &mut evaluator, false) {
+      Ok(result) => {
+        let mut path = path.split("/").collect::<Vec<&str>>();
 
-      let mut path = path.split("/").collect::<Vec<&str>>();
+        fs::write(path.last().unwrap().replace(r"ign", "lua"), result);
 
-      fs::write(path.last().unwrap().replace(r"ign", "lua"), result);
-
-      return Ok(());
-    }
+        return Ok(());
+      }
+      Err(_) => {
+        return Err(());
+      }
+    },
     Err(e) => {
       println!("{:?}", e);
       Err(())
@@ -112,6 +116,7 @@ fn run(source: String, evaluator: &mut Evaluator, relp: bool) -> Result<String, 
 
   if relp {
     println!("{}", code);
+    return Ok(String::new());
   }
 
   diagnostics.clean_diagnostic();

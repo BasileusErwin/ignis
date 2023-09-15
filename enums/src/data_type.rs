@@ -12,8 +12,8 @@ pub enum DataType {
   Pending,
   Void,
   Variable(String),
+  Array(Box<DataType>),
   // TODO: Type non-primitive
-  Array(Vec<DataType>),
   ClassType(String),
   GenericType {
     base: Box<DataType>,
@@ -59,8 +59,7 @@ impl DataType {
         format!("Union<{}>", type_strings.join(" | "))
       }
       DataType::Array(types) => {
-        let type_strings: Vec<String> = types.iter().map(|t| t.to_string()).collect();
-        format!("Array[{}]", type_strings.join(", "))
+        format!("Array<{}>", types.to_string())
       }
       DataType::IntersectionType(types) => {
         let type_strings: Vec<String> = types.iter().map(|t| t.to_string()).collect();

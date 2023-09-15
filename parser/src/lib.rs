@@ -1,4 +1,7 @@
-use ast::statement::{class::Class, variable::VariableMetadata};
+use ast::{
+  statement::{class::Class, variable::VariableMetadata, for_in::ForIn},
+  expression::array::Array,
+};
 use enums::{data_type::DataType, token_type::TokenType};
 use lexer::text_span::TextSpan;
 
@@ -219,6 +222,24 @@ impl Parser {
           LiteralValue::from_token_type(token.kind.clone(), token.span.literal.clone()),
         )))
       }
+      TokenType::LeftBrack => {
+        self.advance();
+
+        let mut elements = Vec::new();
+        if !self.check(TokenType::RightBrack) {
+          loop {
+            elements.push(self.expression()?);
+            if !self.match_token(&[TokenType::Comma]) {
+              break;
+            }
+          }
+        }
+
+        self.consume(TokenType::RightBrack)?;
+
+        let data_type = DataType::Array(Box::new(DataType::Pending));
+        return Ok(Expression::Array(Array::new(token, elements, data_type)));
+      }
       TokenType::LeftParen => {
         self.advance();
         let expression = self.expression()?;
@@ -314,6 +335,7 @@ impl Parser {
       Expression::Logical(logical) => logical.data_type.clone(),
       Expression::Ternary(ternary) => ternary.data_type.clone(),
       Expression::Call(call) => call.return_type.clone(),
+      Expression::Array(a) => a.data_type.clone(),
     }
   }
 
@@ -341,7 +363,7 @@ impl Parser {
   }
 
   fn declaration(&mut self) -> ParserResult<Statement> {
-    if self.match_token(&[TokenType::Let, TokenType::Const]) {
+    if self.match_token(&[TokenType::Let]) {
       return self.variable_declaration();
     }
 
@@ -359,6 +381,10 @@ impl Parser {
 
     if self.match_token(&[TokenType::While]) {
       return self.while_statement();
+    }
+
+    if self.match_token(&[TokenType::For]) {
+      return self.for_statement();
     }
 
     match self.statement() {
@@ -498,7 +524,7 @@ impl Parser {
 
     let token = self.peek();
 
-    let type_annotation = DataType::from_token_type(token.kind.clone());
+    let mut type_annotation = DataType::from_token_type(token.kind.clone());
 
     if type_annotation == DataType::None {
       return Err(ParserDiagnosticError::ExpectedTypeAfterVariable(token));
@@ -506,8 +532,27 @@ impl Parser {
 
     self.advance();
 
+    if self.match_token(&[TokenType::LeftBrack]) {
+      self.consume(TokenType::RightBrack)?;
+
+      type_annotation = DataType::Array(Box::new(type_annotation));
+    }
+
     if self.match_token(&[TokenType::Equal]) {
-      initializer = Some(self.expression()?);
+      let mut value = self.expression()?;
+
+      match value {
+        Expression::Array(a) => {
+          value = Expression::Array(Array::new(
+            a.token.clone(),
+            a.elements,
+            type_annotation.clone(),
+          ));
+        }
+        _ => (),
+      };
+
+      initializer = Some(value);
     }
 
     self.consume(TokenType::SemiColon)?;
@@ -659,6 +704,32 @@ impl Parser {
       Box::new(condition),
       Box::new(body),
     )))
+  }
+
+  fn for_statement(&mut self) -> Result<Statement, ParserDiagnosticError> {
+    self.consume(TokenType::LeftParen)?;
+
+    self.consume(TokenType::Let)?;
+    let item: Token = self.consume(TokenType::Identifier)?;
+
+    let variable = Variable::new(
+      Box::new(item.clone()),
+      None,
+      DataType::Pending,
+      VariableMetadata::new(true, false, false, false, false),
+    );
+
+    self.consume(TokenType::In)?;
+
+    let iterable: Expression = self.expression()?;
+
+    self.consume(TokenType::RightParen)?;
+
+    let body: Statement = self.statement()?;
+
+    let statement = ForIn::new(variable, iterable, body, item);
+
+    Ok(Statement::ForIn(statement))
   }
 
   fn if_statement(&mut self) -> ParserResult<Statement> {

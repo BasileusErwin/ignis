@@ -1,6 +1,7 @@
 pub mod block;
 pub mod class;
 pub mod expression;
+pub mod for_in;
 pub mod forof;
 pub mod function;
 pub mod if_statement;
@@ -13,7 +14,7 @@ use serde_json::json;
 use self::{
   expression::ExpressionStatement, variable::Variable, if_statement::IfStatement, block::Block,
   while_statement::WhileStatement, function::FunctionStatement, return_statement::Return,
-  class::Class,
+  class::Class, for_in::ForIn,
 };
 
 use crate::visitor::Visitor;
@@ -28,6 +29,7 @@ pub enum Statement {
   FunctionStatement(FunctionStatement),
   Return(Return),
   Class(Class),
+  ForIn(ForIn),
 }
 
 impl Statement {
@@ -43,6 +45,7 @@ impl Statement {
       }
       Statement::Return(r) => visitor.visit_return_statement(r),
       Statement::Class(class) => visitor.visit_class_statement(class),
+      Statement::ForIn(for_in) => visitor.visit_for_in_statement(for_in),
     }
   }
 
@@ -118,6 +121,13 @@ impl Statement {
           "name": class.name.span.literal,
           // "methods": class.methods.iter().map(|x| x.to_json()).collect::<Vec<serde_json::Value>>(),
           // "properties": class.properties.iter().map(|x| x.to_json()).collect::<Vec<serde_json::Value>>(),
+        })
+      }
+      Statement::ForIn(for_in) => {
+        json!({
+          "type": "ForIn",
+          "iterable": for_in.iterable.to_json(),
+          "body": for_in.body.to_json(),
         })
       }
     }

@@ -10,8 +10,17 @@ use analyzer_value::AnalyzerValue;
 use ast::{
   visitor::Visitor,
   expression::{
-    binary::Binary, Expression, literal::Literal, unary::Unary, grouping::Grouping,
-    logical::Logical, assign::Assign, variable::VariableExpression, ternary::Ternary, call::Call,
+    binary::Binary,
+    Expression,
+    literal::Literal,
+    unary::Unary,
+    grouping::Grouping,
+    logical::Logical,
+    assign::Assign,
+    variable::VariableExpression,
+    ternary::Ternary,
+    call::Call,
+    array::{Array, self},
   },
   statement::{
     Statement,
@@ -23,6 +32,7 @@ use ast::{
     function::{FunctionStatement, FunctionParameter},
     return_statement::Return,
     class::Class,
+    for_in::ForIn,
   },
 };
 use enums::{data_type::DataType, token_type::TokenType};
@@ -42,6 +52,8 @@ use ir::{
     ir_if::IRIf,
     ir_while::IRWhile,
     ir_return::IRReturn,
+    ir_for_in::IRForIn,
+    ir_array::IRArray,
   },
   instruction_type::IRInstructionType,
 };
@@ -395,6 +407,9 @@ impl Visitor<AnalyzerResult> for Analyzer {
         IRInstruction::Logical(logical) => {
           value = IRInstruction::Logical(logical);
         }
+        IRInstruction::Array(array) => {
+          value = IRInstruction::Array(array);
+        }
         _ => (),
       }
     }
@@ -562,6 +577,82 @@ impl Visitor<AnalyzerResult> for Analyzer {
 
   fn visit_class_statement(&mut self, statement: &Class) -> AnalyzerResult {
     todo!()
+  }
+
+  fn visit_array_expression(&mut self, expression: &Array) -> AnalyzerResult {
+    let mut elements = Vec::new();
+    let mut element_types = Vec::new();
+    let array_type = expression.data_type.clone();
+
+    for elem in &expression.elements {
+      let analyzed_elem = self.analyzer(elem)?;
+      let elem_type = self.extract_data_type(&analyzed_elem);
+
+      elements.push(analyzed_elem);
+      element_types.push(elem_type);
+    }
+
+    let first_type = element_types.first().unwrap_or(&DataType::None);
+
+    if !element_types.iter().all(|t| t == first_type) {
+      return Err(AnalyzerDiagnosticError::ArrayElementTypeMismatch(
+        expression.token.clone(),
+      ));
+    }
+
+    let instruction = IRInstruction::Array(IRArray::new(
+      elements,
+      expression.token.clone(),
+      DataType::Array(Box::new(first_type.clone())),
+    ));
+
+    Ok(instruction)
+  }
+
+  fn visit_for_in_statement(&mut self, statement: &ForIn) -> AnalyzerResult {
+    self.declare(&statement.variable.name.span.literal);
+
+    let iterable = self.analyzer(&*statement.iterable)?;
+    let data_type = self.extract_data_type(&iterable);
+
+    if !self.is_iterable(&iterable) {
+      return Err(AnalyzerDiagnosticError::NotIterable(
+        statement.token.clone(),
+      ));
+    }
+
+    self.begin_scope();
+
+    self.define(&statement.variable.name.span.literal);
+
+    let variable = IRVariable::new(
+      statement.variable.name.span.literal.clone(),
+      data_type,
+      None,
+      IRVariableMetadata::new(
+        statement.variable.metadata.is_mutable,
+        statement.variable.metadata.is_reference,
+        false,
+        false,
+        false,
+        false,
+      ),
+    );
+
+    self.scopes_variables.push(variable.clone());
+
+    let body = self.analyze_statement(&statement.body)?;
+
+    self.end_scope();
+
+    let instruction = IRInstruction::ForIn(IRForIn::new(
+      variable,
+      Box::new(iterable),
+      Box::new(body),
+      statement.token.clone(),
+    ));
+
+    Ok(instruction)
   }
 }
 
@@ -760,6 +851,7 @@ impl Analyzer {
       IRInstruction::Assign(a) => self.extract_data_type(&*a.value.clone()),
       IRInstruction::Call(c) => c.return_type.clone(),
       IRInstruction::Return(r) => r.data_type.clone(),
+      IRInstruction::Array(array) => array.data_type.clone(),
       _ => DataType::None,
     }
   }
@@ -877,6 +969,16 @@ impl Analyzer {
         }
       }
       _ => (false, DataType::None),
+    }
+  }
+
+  fn is_iterable(&self, iterable: &IRInstruction) -> bool {
+    match iterable {
+      IRInstruction::Variable(var) => match var.data_type {
+        DataType::Array(_) => true,
+        _ => false,
+      },
+      _ => false,
     }
   }
 }

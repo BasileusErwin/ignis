@@ -1,4 +1,4 @@
-use ast::expression::variable::VariableExpression;
+use ast::expression::{variable::VariableExpression, Expression};
 use enums::data_type::DataType;
 use lexer::{token::Token, text_span::TextSpan};
 
@@ -31,4 +31,6 @@ pub enum AnalyzerDiagnosticError {
   ArgumentTypeMismatch(DataType, DataType, Token),
   ImmutableVariableAsMutableParameter(String, String, Token),
   ReturnOutsideFunction(Token),
+  NotIterable(Token),
+  ArrayElementTypeMismatch(Token),
 }

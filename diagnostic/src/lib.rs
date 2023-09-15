@@ -3,6 +3,8 @@ pub mod warning;
 
 use std::fmt::Display;
 
+use ast::expression::Expression;
+
 use {
   lexer::{text_span::TextSpan, token::Token},
   ast::expression::variable::VariableExpression,
@@ -413,5 +415,13 @@ impl DiagnosticList {
 
   fn report_return_outside_function(&mut self, token: &Token) {
     self.report_error(format!("Return outside function"), token.span.clone())
+  }
+
+  fn report_not_iterable(&mut self, token: &Token) {
+    self.report_error(format!("Not iterable"), token.span.clone());
+  }
+
+  fn report_array_element_type_mismatch(&mut self, token: &Token) {
+    self.report_error(format!("Array element type mismatch"), token.span.clone())
   }
 }
