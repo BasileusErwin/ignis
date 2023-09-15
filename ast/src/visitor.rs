@@ -6,6 +6,7 @@ use crate::{
   statement::{
     expression::ExpressionStatement, variable::Variable, if_statement::IfStatement, block::Block,
     while_statement::WhileStatement, function::FunctionStatement, return_statement::Return,
+    class::Class,
   },
 };
 
@@ -29,4 +30,5 @@ pub trait Visitor<R> {
   fn visit_while_statement(&mut self, statement: &WhileStatement) -> R;
   fn visit_function_statement(&mut self, statement: &FunctionStatement) -> R;
   fn visit_return_statement(&mut self, statement: &Return) -> R;
+  fn visit_class_statement(&mut self, statement: &Class) -> R;
 }

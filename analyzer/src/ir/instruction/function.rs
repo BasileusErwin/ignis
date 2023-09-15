@@ -8,6 +8,7 @@ pub struct IRFunction {
   pub parameters: Vec<IRVariable>,
   pub return_type: DataType,
   pub body: Option<Box<IRBlock>>,
+  pub is_recursive: bool,
 }
 
 impl IRFunction {
@@ -16,12 +17,14 @@ impl IRFunction {
     parameters: Vec<IRVariable>,
     return_type: DataType,
     body: Option<Box<IRBlock>>,
+    is_recursive: bool,
   ) -> Self {
     Self {
       name,
       parameters,
       return_type,
       body,
+      is_recursive,
     }
   }
 }

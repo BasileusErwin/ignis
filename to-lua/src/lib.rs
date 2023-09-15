@@ -2,7 +2,7 @@ use std::ops::IndexMut;
 
 use analyzer::{
   ir::{
-    instruction::{IRInstruction, function::IRFunction, call::IRCall},
+    instruction::{IRInstruction, function::IRFunction, call::IRCall, variable::IRVariable},
     instruction_type::IRInstructionType,
   },
   analyzer_value::AnalyzerValue,
@@ -27,6 +27,7 @@ fn transpile_opeartor_to_lua(operator: &IRInstructionType) -> String {
     IRInstructionType::AssignAdd => "+=",
     IRInstructionType::AssignSub => "-=",
     IRInstructionType::Mod => "%",
+    IRInstructionType::Concatenate => "..",
   }
   .to_string()
 }
@@ -42,12 +43,27 @@ fn transpile_function_to_lua(func: &IRFunction, indent_level: usize) -> String {
       .collect::<Vec<String>>()
       .join(", ");
 
-    code.push_str(&format!(
-      "{}local {} = function({})\n",
-      " ".repeat(indent_level),
-      func.name,
-      parameters
-    ));
+    if func.is_recursive {
+      code.push_str(&format!(
+        "{}local {}\n",
+        " ".repeat(indent_level),
+        func.name
+      ));
+
+      code.push_str(&format!(
+        "{}{} = function({})\n",
+        " ".repeat(indent_level),
+        func.name,
+        parameters
+      ));
+    } else {
+      code.push_str(&format!(
+        "{}local {} = function({})\n",
+        " ".repeat(indent_level),
+        func.name,
+        parameters
+      ));
+    }
 
     for instr in &body.instructions {
       code.push_str(&transpile_ir_to_lua(instr, indent_level + 2));
@@ -64,8 +80,19 @@ fn transpile_call_to_lua(call: &IRCall, indent_level: usize) -> String {
 
   let name = match call.name.as_str() {
     "println" => "print".to_string(),
+    "toString" => "toString".to_string(),
     _ => call.name.clone(),
   };
+
+  if name == "toString" {
+    code.push_str(&format!(
+      "{}{}",
+      " ".repeat(indent_level),
+      transpile_ir_to_lua(&call.arguments[0], indent_level)
+    ));
+
+    return code;
+  }
 
   code.push_str(&format!(
     "{}{}({})",
@@ -82,6 +109,25 @@ fn transpile_call_to_lua(call: &IRCall, indent_level: usize) -> String {
   code.push_str("\n");
 
   code
+}
+
+fn transpile_variable_to_lua(variable: &IRVariable, indent_level: usize) -> String {
+  let var_value = if let Some(value) = &variable.value {
+    transpile_ir_to_lua(value, 0)
+  } else {
+    "".to_string()
+  };
+
+  if variable.metadata.is_declaration {
+    format!(
+      "{}local {} = {}\n",
+      " ".repeat(indent_level),
+      variable.name,
+      var_value
+    )
+  } else {
+    format!("{}", variable.name)
+  }
 }
 
 pub fn transpile_ir_to_lua(instruction: &IRInstruction, indent_level: usize) -> String {
@@ -104,27 +150,7 @@ pub fn transpile_ir_to_lua(instruction: &IRInstruction, indent_level: usize) -> 
     }
     IRInstruction::Block(block) => {
       let mut code = String::new();
-      for var in &block.scopes_variables {
-        let var_value = if let Some(value) = &var.value {
-          transpile_ir_to_lua(value, indent_level)
-        } else {
-          "".to_string()
-        };
-
-        code.push_str(&format!(
-          "{}local {} = {}\n",
-          " ".repeat(indent_level),
-          var.name,
-          var_value
-        ));
-      }
-
       for instr in &block.instructions {
-        match instr {
-          IRInstruction::Variable(_) => continue,
-          _ => (),
-        };
-
         code.push_str(&transpile_ir_to_lua(instr, indent_level));
       }
       code
@@ -136,24 +162,7 @@ pub fn transpile_ir_to_lua(instruction: &IRInstruction, indent_level: usize) -> 
 
       format!("{} {}", op, value)
     }
-    IRInstruction::Variable(var) => {
-      let var_value = if let Some(value) = &var.value {
-        transpile_ir_to_lua(value, 0)
-      } else {
-        "".to_string()
-      };
-
-      if var.metadata.is_declaration {
-        format!(
-          "{}local {} = {}\n",
-          " ".repeat(indent_level),
-          var.name,
-          var_value
-        )
-      } else {
-        format!("{}", var.name)
-      }
-    }
+    IRInstruction::Variable(var) => transpile_variable_to_lua(var, indent_level),
     IRInstruction::Logical(logical) => {
       let left = transpile_ir_to_lua(&logical.left, indent_level);
       let right = transpile_ir_to_lua(&logical.right, indent_level);

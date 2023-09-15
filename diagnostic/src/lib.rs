@@ -410,4 +410,8 @@ impl DiagnosticList {
       token.span.clone(),
     );
   }
+
+  fn report_return_outside_function(&mut self, token: &Token) {
+    self.report_error(format!("Return outside function"), token.span.clone())
+  }
 }

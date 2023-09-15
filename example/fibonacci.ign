@@ -1,4 +1,4 @@
-function fibonacci(num: int): int {
+function fibonacci(mut num: int): int {
   if (num < 2) {
      return num;
   }
@@ -6,4 +6,6 @@ function fibonacci(num: int): int {
   return fibonacci(num - 1) + fibonacci(num - 2); 
 }
 
-println(fibonacci(40));
+let mut num: int = 40;
+
+println(fibonacci(num));

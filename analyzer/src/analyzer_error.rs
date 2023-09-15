@@ -30,4 +30,5 @@ pub enum AnalyzerDiagnosticError {
   ClassAlreadyDefined(String),
   ArgumentTypeMismatch(DataType, DataType, Token),
   ImmutableVariableAsMutableParameter(String, String, Token),
+  ReturnOutsideFunction(Token),
 }

@@ -183,7 +183,7 @@ impl Visitor<EvaluatorResult<EvaluatorValue>> for Evaluator {
 
     match environment.define(
       variable.name.span.literal.clone(),
-      VariableEnvironment::new(value.clone(), variable.is_mutable),
+      VariableEnvironment::new(value.clone(), variable.metadata.is_mutable),
     ) {
       Ok(_) => Ok(value),
       Err(error) => Err(ExecutionError::DiagnosticError(error)),
@@ -352,6 +352,13 @@ impl Visitor<EvaluatorResult<EvaluatorValue>> for Evaluator {
       Some(v) => Err(ExecutionError::Return(v)),
       None => Err(ExecutionError::Return(EvaluatorValue::Null)),
     }
+  }
+
+  fn visit_class_statement(
+    &mut self,
+    statement: &ast::statement::class::Class,
+  ) -> EvaluatorResult<EvaluatorValue> {
+    todo!()
   }
 }
 

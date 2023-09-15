@@ -1,0 +1,21 @@
+class User {
+	public firstName: string;
+	public lastName: string;
+	
+	User(firstName: string, lastName: string) {
+		this.firstName = firstName;
+		this.lastName = lastName;
+	}
+	
+	public getFullName(): string {
+		return this.firstName + " " + this.lastName;
+	}
+}
+
+function main(): void {
+	let user: User = new User("John", "Doe");
+	
+	println("Full Name: " + user.getFullName());
+}
+
+main();

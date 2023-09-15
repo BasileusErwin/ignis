@@ -48,6 +48,7 @@ pub enum DiagnosticError {
   ClassAlreadyDefined(String),
   ArgumentTypeMismatch(DataType, DataType, Token),
   ImmutableVariableAsMutableParameter(String, String, Token),
+  ReturnOutsideFunction(Token),
 }
 
 impl DiagnosticError {
@@ -124,6 +125,9 @@ impl DiagnosticError {
         token,
       ) => {
         DiagnosticError::ImmutableVariableAsMutableParameter(parameter_name, variable_name, token)
+      }
+      AnalyzerDiagnosticError::ReturnOutsideFunction(token) => {
+        DiagnosticError::ReturnOutsideFunction(token)
       }
     }
   }
@@ -268,9 +272,20 @@ impl DiagnosticError {
       DiagnosticError::TypeMismatchUnary(right, token) => {
         diagnostics.report_type_mismatch_unary(&right, &token);
       }
-        DiagnosticError::ImmutableVariableAsMutableParameter(parameter_name, variable_name, token) => {
-        diagnostics.report_immutable_variable_as_mutable_parameter(&parameter_name, &variable_name, &token);
-        }
+      DiagnosticError::ImmutableVariableAsMutableParameter(
+        parameter_name,
+        variable_name,
+        token,
+      ) => {
+        diagnostics.report_immutable_variable_as_mutable_parameter(
+          &parameter_name,
+          &variable_name,
+          &token,
+        );
+      }
+      DiagnosticError::ReturnOutsideFunction(token) => {
+        diagnostics.report_return_outside_function(&token);
+      }
     }
   }
 }

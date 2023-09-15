@@ -6,9 +6,26 @@ function isEven(num: int): boolean {
   return num % 3 == 0;
 }
 
+function factorial(n: int): int {
+  if (n <= 1) {
+    return 1;
+  }
+
+  return n * factorial(n - 1);
+}
+
+function printFactorial(num: int, fact: int): void {
+	println("The factorial of " + toString(num) + " is: " + toString(fact));
+}
+
 function main(): void {
 	let x: int = 10;
 	let y: int = 20;
+
+  let num: int = 5;
+  let fact: int = factorial(num);
+
+	printFactorial(num, fact);
 	
 	let z: int = x + y;
 	
@@ -27,8 +44,5 @@ function main(): void {
 	
 	let result: int = sum(x, y);
 
-	println("The sum is: ");
-	println(result);
+	println("The sum is: " + toString(result));
 }
-
-main();

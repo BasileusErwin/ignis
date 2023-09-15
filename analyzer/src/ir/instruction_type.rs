@@ -20,6 +20,7 @@ pub enum IRInstructionType {
   AssignAdd,
   AssignSub,
   Mod,
+  Concatenate,
 }
 
 impl IRInstructionType {
@@ -42,6 +43,7 @@ impl IRInstructionType {
       IRInstructionType::AssignAdd => String::from("assign_add"),
       IRInstructionType::AssignSub => String::from("assign_sub"),
       IRInstructionType::Mod => String::from("mod"),
+      IRInstructionType::Concatenate => String::from("concatenate"),
     }
   }
 

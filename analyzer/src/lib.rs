@@ -3,29 +3,29 @@ pub mod analyzer_value;
 pub mod debug;
 pub mod ir;
 
+use std::{collections::HashMap, vec};
+
 use analyzer_error::AnalyzerDiagnosticError;
 use analyzer_value::AnalyzerValue;
 use ast::{
   visitor::Visitor,
   expression::{
-    binary::Binary,
-    Expression,
-    literal::Literal,
-    unary::Unary,
-    grouping::Grouping,
-    logical::Logical,
-    assign::Assign,
-    variable::VariableExpression,
-    ternary::Ternary,
-    call::{Call, self},
+    binary::Binary, Expression, literal::Literal, unary::Unary, grouping::Grouping,
+    logical::Logical, assign::Assign, variable::VariableExpression, ternary::Ternary, call::Call,
   },
   statement::{
-    Statement, expression::ExpressionStatement, block::Block, variable::Variable,
-    if_statement::IfStatement, while_statement::WhileStatement, function::FunctionStatement,
+    Statement,
+    expression::ExpressionStatement,
+    block::Block,
+    variable::Variable,
+    if_statement::IfStatement,
+    while_statement::WhileStatement,
+    function::{FunctionStatement, FunctionParameter},
     return_statement::Return,
+    class::Class,
   },
 };
-use enums::data_type::{DataType, self};
+use enums::{data_type::DataType, token_type::TokenType};
 use ir::{
   instruction::{
     IRInstruction,
@@ -34,7 +34,7 @@ use ir::{
     literal::IRLiteral,
     unary::IRUnary,
     function::IRFunction,
-    variable::{IRVariable, IRVariableMetadata},
+    variable::{IRVariable, IRVariableMetadata, self},
     block::IRBlock,
     assign::IRAssign,
     ternary::IRTernary,
@@ -46,15 +46,15 @@ use ir::{
   instruction_type::IRInstructionType,
 };
 
-use crate::ir::instruction::ir_if;
-
 pub type AnalyzerResult = Result<IRInstruction, AnalyzerDiagnosticError>;
 type CheckCompatibility<T> = (bool, T);
 
 pub struct Analyzer {
   pub irs: Vec<IRInstruction>,
-  pub block_stack: Vec<IRBlock>,
+  pub block_stack: Vec<HashMap<String, bool>>,
   pub diagnostics: Vec<AnalyzerDiagnosticError>,
+  pub scopes_variables: Vec<IRVariable>,
+  pub current_function: Option<IRFunction>,
 }
 
 impl Visitor<AnalyzerResult> for Analyzer {
@@ -62,7 +62,17 @@ impl Visitor<AnalyzerResult> for Analyzer {
     let left = self.analyzer(&*expression.left)?;
     let right = self.analyzer(&*expression.right)?;
     let operator = expression.operator.clone();
-    let instruction_type = IRInstructionType::from_token_kind(&operator.kind);
+    let instruction_type = if operator.kind == TokenType::Plus {
+      if self.extract_data_type(&left) == DataType::String
+        && self.extract_data_type(&right) == DataType::String
+      {
+        IRInstructionType::Concatenate
+      } else {
+        IRInstructionType::Add
+      }
+    } else {
+      IRInstructionType::from_token_kind(&operator.kind)
+    };
 
     let (result, data_type) = self.are_types_compatible(&left, &right, &instruction_type);
     let left_type = self.extract_data_type(&left);
@@ -120,37 +130,57 @@ impl Visitor<AnalyzerResult> for Analyzer {
   }
 
   fn visit_variable_expression(&mut self, variable: &VariableExpression) -> AnalyzerResult {
+    if self.block_stack.is_empty() {
+      return Err(AnalyzerDiagnosticError::UndeclaredVariable(
+        variable.clone(),
+      ));
+    }
+
     let irs = &self.irs;
     let is_function = irs.into_iter().find(|ir| match ir {
       IRInstruction::Function(f) => f.name == variable.name.span.literal,
       _ => false,
     });
 
-    if is_function.is_some() {
-      let function = is_function.unwrap();
+    if let Some(IRInstruction::Function(f)) = is_function {
+      let function = f.clone();
 
-      let instruction = IRInstruction::Function(match function {
-        IRInstruction::Function(f) => f.clone(),
-        _ => unreachable!(),
-      });
+      let instruction = IRInstruction::Function(function);
 
       return Ok(instruction);
     }
 
-    let current_block = &self.block_stack;
+    if let Some(f) = &mut self.current_function {
+      if f.name == variable.name.span.literal {
+        f.is_recursive = true;
 
-    let env = current_block.into_iter().find(|block| {
-      block
-        .scopes_variables
-        .iter()
-        .any(|var| var.name == variable.name.span.literal)
-    });
+        let instruction = IRInstruction::Function(f.clone());
+
+        return Ok(instruction);
+      }
+    }
+
+    let env = self.block_stack.last();
 
     if let Some(block) = env {
-      let mut variable = block
+      if block.get(&variable.name.span.literal).is_none() {
+        return Err(AnalyzerDiagnosticError::UndeclaredVariable(
+          variable.clone(),
+        ));
+      }
+
+      let is_declared = *block.get(variable.name.span.literal.as_str()).unwrap();
+
+      if !is_declared {
+        return Err(AnalyzerDiagnosticError::UndeclaredVariable(
+          variable.clone(),
+        ));
+      }
+
+      let mut variable = self
         .scopes_variables
         .iter()
-        .find(|var| var.name == variable.name.span.literal)
+        .find(|v| v.name == variable.name.span.literal)
         .unwrap()
         .clone();
 
@@ -167,21 +197,31 @@ impl Visitor<AnalyzerResult> for Analyzer {
   }
 
   fn visit_assign_expression(&mut self, expression: &Assign) -> AnalyzerResult {
-    let value = self.analyzer(&expression.value)?;
-    let current_block = &self.block_stack;
+    if self.block_stack.is_empty()
+      || self
+        .block_stack
+        .last()
+        .unwrap()
+        .get(&expression.name.span.literal)
+        .is_none()
+    {
+      return Err(AnalyzerDiagnosticError::UndefinedVariable(
+        expression.name.clone(),
+      ));
+    }
 
-    let env = current_block.into_iter().find(|block| {
-      block
-        .scopes_variables
-        .iter()
-        .any(|var| var.name == expression.name.span.literal)
+    let value = self.analyzer(&expression.value)?;
+    let current_block = self.block_stack.last().unwrap();
+
+    let env = current_block.into_iter().find(|(name, is_declared)| {
+      name.as_str() == expression.name.span.literal.as_str() && **is_declared
     });
 
-    if let Some(block) = env {
-      let variable = block
+    if let Some((name, _)) = env {
+      let variable = self
         .scopes_variables
         .iter()
-        .find(|var| var.name == expression.name.span.literal)
+        .find(|v| v.name == *name)
         .unwrap();
 
       if variable.metadata.is_mutable {
@@ -276,6 +316,11 @@ impl Visitor<AnalyzerResult> for Analyzer {
         IRInstruction::Literal(l) => l.value.to_data_type(),
         IRInstruction::Variable(v) => v.data_type.clone(),
         IRInstruction::Function(f) => f.return_type.clone(),
+        IRInstruction::Call(c) => c.return_type.clone(),
+        IRInstruction::Return(r) => r.data_type.clone(),
+        IRInstruction::Binary(b) => b.data_type.clone(),
+        IRInstruction::Unary(u) => u.data_type.clone(),
+        IRInstruction::Logical(l) => DataType::Boolean,
         _ => DataType::None,
       };
 
@@ -318,6 +363,8 @@ impl Visitor<AnalyzerResult> for Analyzer {
   }
 
   fn visit_variable_statement(&mut self, variable: &Variable) -> AnalyzerResult {
+    self.declare(&variable.name.span.literal);
+
     let mut value = IRInstruction::Literal(IRLiteral::new(AnalyzerValue::Null));
     let data_type = variable.type_annotation.clone();
 
@@ -352,28 +399,32 @@ impl Visitor<AnalyzerResult> for Analyzer {
       }
     }
 
-    let current_block = self.block_stack.last_mut();
-
-    if current_block.is_none() {
-      self.block_stack = vec![IRBlock::new(Vec::new(), Vec::new())];
-    }
-
-    let current_block = self.block_stack.last_mut().unwrap();
-
-    current_block.scopes_variables.push(IRVariable::new(
+    let variable = IRVariable::new(
       variable.name.span.literal.clone(),
       data_type.clone(),
       Some(Box::new(value.clone())),
-      IRVariableMetadata::new(variable.is_mutable, false, false, false, false, true),
-    ));
+      IRVariableMetadata::new(
+        variable.metadata.is_mutable,
+        variable.metadata.is_reference,
+        false,
+        false,
+        false,
+        true,
+      ),
+    );
 
-    Ok(IRInstruction::Variable(
-      current_block.scopes_variables.last().unwrap().clone(),
-    ))
+    self.define(&variable.name);
+
+    self.scopes_variables.push(variable.clone());
+
+    Ok(IRInstruction::Variable(variable.clone()))
   }
 
   fn visit_block(&mut self, block: &Block) -> AnalyzerResult {
-    self.block_stack.push(IRBlock::new(Vec::new(), Vec::new()));
+    let scopes_variables = self.scopes_variables.clone();
+
+    self.begin_scope();
+
     let mut ir_block = IRBlock::new(Vec::new(), Vec::new());
 
     for statement in &block.statements {
@@ -381,12 +432,11 @@ impl Visitor<AnalyzerResult> for Analyzer {
       ir_block.instructions.push(result);
     }
 
-    let block = self.block_stack.pop().unwrap();
+    self.end_scope();
 
-    Ok(IRInstruction::Block(IRBlock::new(
-      ir_block.instructions.clone(),
-      block.scopes_variables,
-    )))
+    self.scopes_variables = scopes_variables;
+
+    Ok(IRInstruction::Block(ir_block))
   }
 
   fn visit_if_statement(&mut self, statement: &IfStatement) -> AnalyzerResult {
@@ -420,10 +470,14 @@ impl Visitor<AnalyzerResult> for Analyzer {
   }
 
   fn visit_function_statement(&mut self, statement: &FunctionStatement) -> AnalyzerResult {
+    self.begin_scope();
     let mut parameters = Vec::<IRVariable>::new();
+    self.declare(&statement.name.span.literal);
+    self.define(&statement.name.span.literal);
 
     for param in &statement.parameters {
-      parameters.push(IRVariable::new(
+      self.define_parameter(&param.name.span.literal);
+      let parameter = IRVariable::new(
         param.name.span.literal.clone(),
         param.data_type.clone(),
         None,
@@ -435,59 +489,79 @@ impl Visitor<AnalyzerResult> for Analyzer {
           false,
           false,
         ),
-      ));
+      );
+
+      self.scopes_variables.push(parameter.clone());
+
+      parameters.push(parameter);
     }
 
-    let previus_block = self.block_stack.clone();
+    let mut ir: IRBlock = IRBlock::new(Vec::new(), Vec::new());
 
-    self
-      .block_stack
-      .push(IRBlock::new(Vec::new(), parameters.clone()));
+    let mut current_function = IRFunction::new(
+      statement.name.span.literal.clone(),
+      parameters.clone(),
+      statement.return_type.clone().unwrap_or(DataType::Void),
+      None,
+      false,
+    );
 
-    let mut current_block = self.block_stack.last().unwrap().clone();
+    self.current_function = Some(current_function.clone());
 
     for body in &statement.body {
       let result = self.analyze_statement(body)?;
 
       match result {
         IRInstruction::Variable(v) => {
-          current_block.scopes_variables.push(v);
+          self.scopes_variables.push(v.clone());
+          ir.scopes_variables.push(v);
         }
         _ => {
-          current_block.instructions.push(result);
+          ir.instructions.push(result);
         }
       };
     }
 
-    self.block_stack.pop();
+    self.end_scope();
 
-    self.block_stack = previus_block.clone();
+    current_function = self.current_function.as_ref().unwrap().clone();
 
-    let instruction = IRInstruction::Function(IRFunction::new(
-      statement.name.span.literal.clone(),
-      parameters,
-      statement.return_type.clone().unwrap_or(DataType::Void),
-      Some(Box::new(current_block.clone())),
-    ));
+    current_function.body = Some(Box::new(ir.clone()));
+
+    let instruction = IRInstruction::Function(current_function);
+
+    self.current_function = None;
 
     Ok(instruction)
   }
 
   fn visit_return_statement(&mut self, statement: &Return) -> AnalyzerResult {
+    if self.current_function.is_none() {
+      return Err(AnalyzerDiagnosticError::ReturnOutsideFunction(
+        *statement.keyword.clone(),
+      ));
+    }
+
     let value = &statement.value;
     if value.is_none() {
-      let instruction = IRInstruction::Return(IRReturn::new(Box::new(IRInstruction::Literal(
-        IRLiteral::new(AnalyzerValue::Null),
-      ))));
+      let instruction = IRInstruction::Return(IRReturn::new(
+        Box::new(IRInstruction::Literal(IRLiteral::new(AnalyzerValue::Null))),
+        DataType::Void,
+      ));
 
       return Ok(instruction);
     }
 
     let value = self.analyzer(&value.as_ref().unwrap())?;
+    let data_type = self.extract_data_type(&value);
 
-    let instruction = IRInstruction::Return(IRReturn::new(Box::new(value)));
+    let instruction = IRInstruction::Return(IRReturn::new(Box::new(value), data_type));
 
     Ok(instruction)
+  }
+
+  fn visit_class_statement(&mut self, statement: &Class) -> AnalyzerResult {
+    todo!()
   }
 }
 
@@ -504,12 +578,32 @@ impl Analyzer {
       )],
       DataType::Void,
       None,
+      false,
     )));
+
+    irs.push(IRInstruction::Function(IRFunction::new(
+      "toString".to_string(),
+      vec![IRVariable::new(
+        "value".to_string(),
+        DataType::None,
+        None,
+        IRVariableMetadata::new(false, false, true, false, false, false),
+      )],
+      DataType::String,
+      None,
+      false,
+    )));
+
+    let mut block_stack: HashMap<String, bool> = HashMap::new();
+    block_stack.insert("println".to_string(), true);
+    block_stack.insert("toString".to_string(), true);
 
     Self {
       irs,
       diagnostics: Vec::new(),
-      block_stack: Vec::new(),
+      block_stack: vec![block_stack],
+      scopes_variables: Vec::new(),
+      current_function: None,
     }
   }
 
@@ -517,7 +611,17 @@ impl Analyzer {
     for statement in statements {
       match self.analyze_statement(statement) {
         Ok(ir) => {
-          self.irs.push(ir);
+          self.irs.push(ir.clone());
+
+          if let IRInstruction::Function(f) = ir {
+            if f.name == "main" {
+              self.irs.push(IRInstruction::Call(IRCall::new(
+                "main".to_string(),
+                Vec::new(),
+                DataType::Void,
+              )))
+            }
+          }
         }
         Err(e) => self.diagnostics.push(e),
       }
@@ -530,6 +634,46 @@ impl Analyzer {
 
   fn analyze_statement(&mut self, statement: &Statement) -> AnalyzerResult {
     statement.accept(self)
+  }
+
+  fn begin_scope(&mut self) {
+    self
+      .block_stack
+      .push(self.block_stack.clone().last().unwrap().clone());
+  }
+
+  fn end_scope(&mut self) {
+    self.block_stack.pop().unwrap();
+  }
+
+  fn declare(&mut self, name: &String) {
+    if self.block_stack.is_empty() {
+      return;
+    }
+
+    let current_block = self.block_stack.last_mut().unwrap();
+
+    current_block.insert(name.clone(), false);
+  }
+
+  fn define(&mut self, name: &String) {
+    if self.block_stack.is_empty() {
+      return;
+    }
+
+    let current_block = self.block_stack.last_mut().unwrap();
+
+    current_block.insert(name.clone(), true);
+  }
+
+  fn define_parameter(&mut self, name: &String) {
+    if self.block_stack.is_empty() {
+      return;
+    }
+
+    let current_block = self.block_stack.last_mut().unwrap();
+
+    current_block.insert(name.clone(), true);
   }
 
   fn find_function_in_ir(&self, name: String) -> Option<IRFunction> {
@@ -615,6 +759,7 @@ impl Analyzer {
       IRInstruction::Logical(_) => DataType::Boolean,
       IRInstruction::Assign(a) => self.extract_data_type(&*a.value.clone()),
       IRInstruction::Call(c) => c.return_type.clone(),
+      IRInstruction::Return(r) => r.data_type.clone(),
       _ => DataType::None,
     }
   }
@@ -703,6 +848,13 @@ impl Analyzer {
     let right_type = self.extract_data_type(right);
 
     match operator {
+      IRInstructionType::Concatenate => {
+        if left_type == DataType::String && right_type == DataType::String {
+          (true, DataType::String)
+        } else {
+          (false, DataType::None)
+        }
+      }
       IRInstructionType::Add => self.check_add_compatibility(&left_type, &right_type),
       IRInstructionType::Sub | IRInstructionType::Mul | IRInstructionType::Div => {
         self.check_arithmetic_compatibility(&left_type, &right_type)

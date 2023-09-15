@@ -1,3 +1,4 @@
+use ast::statement::{class::Class, variable::VariableMetadata};
 use enums::{data_type::DataType, token_type::TokenType};
 use lexer::text_span::TextSpan;
 
@@ -344,6 +345,10 @@ impl Parser {
       return self.variable_declaration();
     }
 
+    if self.match_token(&[TokenType::Class]) {
+      return self.class_declaration();
+    }
+
     if self.match_token(&[TokenType::Function]) {
       return self.function(FunctionKind::Function);
     }
@@ -512,7 +517,7 @@ impl Parser {
         Box::new(name),
         Some(Box::new(ini)),
         type_annotation,
-        mutable,
+        VariableMetadata::new(mutable, false, false, false, false),
       )))
     } else {
       let token = self.peek();
@@ -745,5 +750,24 @@ impl Parser {
 
   fn previous(&mut self) -> Token {
     self.tokens[self.current - 1].clone()
+  }
+
+  fn class_declaration(&mut self) -> Result<Statement, ParserDiagnosticError> {
+    let name: Token = self.consume(TokenType::Identifier)?;
+
+    let mut methods: Vec<FunctionStatement> = Vec::new();
+
+    self.consume(TokenType::LeftBrace)?;
+
+    while !self.check(TokenType::RightBrace) && !self.is_at_end() {
+      let method = match self.function(FunctionKind::Method)? {
+        Statement::FunctionStatement(function) => methods.push(function),
+        _ => (),
+      };
+    }
+
+    self.consume(TokenType::RightBrace)?;
+
+    Ok(Statement::Class(Class::new(name, methods)))
   }
 }

@@ -1,5 +1,7 @@
 pub mod block;
+pub mod class;
 pub mod expression;
+pub mod forof;
 pub mod function;
 pub mod if_statement;
 pub mod return_statement;
@@ -11,6 +13,7 @@ use serde_json::json;
 use self::{
   expression::ExpressionStatement, variable::Variable, if_statement::IfStatement, block::Block,
   while_statement::WhileStatement, function::FunctionStatement, return_statement::Return,
+  class::Class,
 };
 
 use crate::visitor::Visitor;
@@ -24,6 +27,7 @@ pub enum Statement {
   WhileStatement(WhileStatement),
   FunctionStatement(FunctionStatement),
   Return(Return),
+  Class(Class),
 }
 
 impl Statement {
@@ -38,6 +42,7 @@ impl Statement {
         visitor.visit_function_statement(function_statement)
       }
       Statement::Return(r) => visitor.visit_return_statement(r),
+      Statement::Class(class) => visitor.visit_class_statement(class),
     }
   }
 
@@ -55,7 +60,11 @@ impl Statement {
             "name": variable.name.span.literal,
             "initializer": initializer,
             "type_annotation": variable.type_annotation.to_string(),
-            "is_mutable": variable.is_mutable,
+            "is_mutable": variable.metadata.is_mutable,
+            "is_global": variable.metadata.is_global,
+            "is_static": variable.metadata.is_static,
+            "is_public": variable.metadata.is_public,
+            "is_reference": variable.metadata.is_reference,
         })
       }
       Statement::Block(block) => {
@@ -101,6 +110,14 @@ impl Statement {
             Some(value) => value.to_json(),
             None => json!(null),
           },
+        })
+      }
+      Statement::Class(class) => {
+        json!({
+          "type": "Class",
+          "name": class.name.span.literal,
+          // "methods": class.methods.iter().map(|x| x.to_json()).collect::<Vec<serde_json::Value>>(),
+          // "properties": class.properties.iter().map(|x| x.to_json()).collect::<Vec<serde_json::Value>>(),
         })
       }
     }
