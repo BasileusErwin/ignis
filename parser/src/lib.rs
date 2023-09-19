@@ -1,5 +1,12 @@
+use std::collections::HashMap;
+
 use ast::{
-  statement::{class::Class, variable::VariableMetadata, for_in::ForIn},
+  statement::{
+    class::Class,
+    variable::VariableMetadata,
+    for_in::ForIn,
+    import::{Import, ImportSource, ImportSymbol},
+  },
   expression::array::Array,
 };
 use enums::{data_type::DataType, token_type::TokenType};
@@ -372,7 +379,7 @@ impl Parser {
     }
 
     if self.match_token(&[TokenType::Function]) {
-      return self.function(FunctionKind::Function);
+      return self.function(FunctionKind::Function, false);
     }
 
     if self.match_token(&[TokenType::Return]) {
@@ -385,6 +392,14 @@ impl Parser {
 
     if self.match_token(&[TokenType::For]) {
       return self.for_statement();
+    }
+
+    if self.match_token(&[TokenType::Import]) {
+      return self.import_statement();
+    }
+
+    if self.match_token(&[TokenType::Export]) {
+      return self.export_statement();
     }
 
     match self.statement() {
@@ -412,7 +427,7 @@ impl Parser {
     Ok(Statement::Return(result))
   }
 
-  fn function(&mut self, kind: FunctionKind) -> ParserResult<Statement> {
+  fn function(&mut self, kind: FunctionKind, is_public: bool) -> ParserResult<Statement> {
     match kind {
       FunctionKind::Function => {
         let name: Token = self.consume(TokenType::Identifier)?;
@@ -459,7 +474,7 @@ impl Parser {
 
         self.consume(TokenType::Colon)?;
 
-        let mut return_type: Option<DataType> = None;
+        let return_type: Option<DataType>;
         if self.match_token(&[
           TokenType::Void,
           TokenType::IntType,
@@ -488,6 +503,7 @@ impl Parser {
           parameters,
           body,
           return_type,
+          is_public,
         )))
       }
       FunctionKind::Method => todo!(),
@@ -828,17 +844,83 @@ impl Parser {
 
     let mut methods: Vec<FunctionStatement> = Vec::new();
 
-    self.consume(TokenType::LeftBrace)?;
+    // self.consume(TokenType::LeftBrace)?;
 
-    while !self.check(TokenType::RightBrace) && !self.is_at_end() {
-      let method = match self.function(FunctionKind::Method)? {
-        Statement::FunctionStatement(function) => methods.push(function),
-        _ => (),
-      };
-    }
+    // while !self.check(TokenType::RightBrace) && !self.is_at_end() {
+    //   let method = match self.function(FunctionKind::Method)? {
+    //     Statement::FunctionStatement(function) => methods.push(function),
+    //     _ => (),
+    //   };
+    // }
 
     self.consume(TokenType::RightBrace)?;
 
     Ok(Statement::Class(Class::new(name, methods)))
+  }
+
+  fn import_statement(&mut self) -> Result<Statement, ParserDiagnosticError> {
+    self.consume(TokenType::LeftBrace)?;
+
+    let mut symbols: Vec<ImportSymbol> = Vec::new();
+    loop {
+      if self.check(TokenType::Comma) {
+        self.advance();
+        continue;
+      }
+
+      if self.check(TokenType::RightBrace) {
+        break;
+      }
+
+      let symbol_name = self.consume(TokenType::Identifier)?;
+
+      let symbol = if self.check(TokenType::As) {
+        self.advance();
+        let alias = self.consume(TokenType::Identifier)?;
+        Some(alias)
+      } else {
+        None
+      };
+
+      symbols.push(ImportSymbol::new(symbol_name, symbol));
+    }
+
+    self.consume(TokenType::RightBrace)?;
+
+    self.consume(TokenType::From)?;
+    let module_path = self.consume(TokenType::String)?;
+
+    self.consume(TokenType::SemiColon)?;
+
+    let is_std = module_path.span.literal.contains("std");
+    let source = if is_std {
+      ImportSource::StandardLibrary
+    } else {
+      ImportSource::FileSystem
+    };
+
+    Ok(Statement::Import(Import::new(
+      module_path,
+      symbols,
+      is_std,
+      source,
+    )))
+  }
+
+  /*
+   *  export function sum(a: int, b: int): int {
+   *    return a + b;
+   * }
+   */
+  fn export_statement(&mut self) -> Result<Statement, ParserDiagnosticError> {
+    if self.match_token(&[TokenType::Function]) {
+      let function = self.function(FunctionKind::Function, true)?;
+      return Ok(function);
+    } else {
+      return Err(ParserDiagnosticError::ExpectedToken(
+        TokenType::Function,
+        self.peek(),
+      ));
+    }
   }
 }

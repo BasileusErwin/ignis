@@ -1,6 +1,6 @@
 use lexer::token::Token;
 
-use super::{function::FunctionStatement, variable::Variable};
+use super::function::FunctionStatement;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Class {

@@ -3,7 +3,7 @@ function fibonacci(mut num: int): int {
     return num;
   }
 
-  return fibonacci(num - 1) + fibonacci(num - 2); 
+  return fibonacci(num - 1) + fibonacci(num - 2);
 }
 
 let mut num: int = 40;

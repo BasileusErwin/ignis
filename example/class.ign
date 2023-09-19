@@ -1,12 +1,12 @@
 class User {
 	private firstName: string;
 	private lastName: string;
-	
+
 	public User(firstName: string, lastName: string) {
 		this.firstName = firstName;
 		this.lastName = lastName;
 	}
-	
+
 	public getFullName(): string {
 		return this.firstName + " " + this.lastName;
 	}
@@ -14,6 +14,6 @@ class User {
 
 function main(): void {
 	let user: User = new User("John", "Doe");
-	
+
 	println("Full Name: " + user.getFullName());
 }

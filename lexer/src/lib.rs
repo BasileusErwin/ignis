@@ -22,16 +22,18 @@ pub struct Lexer<'a> {
   start: usize,
   line: usize,
   current: usize,
+  module_path: String,
 }
 
 impl<'a> Lexer<'a> {
-  pub fn new(source: &'a str) -> Self {
+  pub fn new(source: &'a str, module_path: String) -> Self {
     Self {
       source,
       tokens: vec![],
       start: 0,
       line: 0,
       current: 0,
+      module_path,
     }
   }
 
@@ -52,7 +54,14 @@ impl<'a> Lexer<'a> {
 
     self.tokens.push(Token::new(
       TokenType::Eof,
-      TextSpan::new(0, 0, self.line, '\0'.to_string(), 0),
+      TextSpan::new(
+        0,
+        0,
+        self.line,
+        '\0'.to_string(),
+        0,
+        self.module_path.clone(),
+      ),
     ));
   }
 
@@ -254,14 +263,9 @@ impl<'a> Lexer<'a> {
       "double" => Some(TokenType::DoubleType),
       "char" => Some(TokenType::CharType),
       "void" => Some(TokenType::Void),
+      "extern" => Some(TokenType::Extern),
       _ => None,
     }
-  }
-
-  fn is_identifier_starter(&self) -> bool {
-    let c: char = self.peek();
-
-    c.is_ascii_lowercase() || c.is_ascii_uppercase() || c == '_'
   }
 
   fn is_identifier_letter(&self) -> bool {
@@ -391,6 +395,7 @@ impl<'a> Lexer<'a> {
         self.line + 1,
         value,
         self.current - self.start,
+        self.module_path.clone(),
       ),
     ));
   }
@@ -420,6 +425,7 @@ impl<'a> Lexer<'a> {
         self.line + 1,
         literal,
         self.current - self.start,
+        self.module_path.clone(),
       ),
     ));
   }
@@ -443,7 +449,7 @@ mod tests {
   #[test]
   fn test_valid_indentifiers() {
     let source: &str = "let helloWorld: string = \"Hello World\";";
-    let mut lexer: Lexer<'_> = Lexer::new(source);
+    let mut lexer: Lexer<'_> = Lexer::new(source, "".to_string());
     lexer.scan_tokens();
 
     assert_eq!(lexer.tokens.len(), 8);
@@ -463,7 +469,7 @@ mod tests {
   #[test]
   fn test_valid_expression() {
     let source: &str = "(3 + 5) * 12;";
-    let mut lexer: Lexer<'_> = Lexer::new(source);
+    let mut lexer: Lexer<'_> = Lexer::new(source, "".to_string());
     lexer.scan_tokens();
 
     assert_eq!(lexer.tokens.len(), 9);
@@ -489,7 +495,7 @@ mod tests {
   #[test]
   fn test_valid_null() {
     let source: &str = "null";
-    let mut lexer: Lexer<'_> = Lexer::new(source);
+    let mut lexer: Lexer<'_> = Lexer::new(source, "".to_string());
     lexer.scan_tokens();
 
     assert_eq!(lexer.tokens.len(), 2);
@@ -500,7 +506,7 @@ mod tests {
   #[test]
   fn test_valid_key_boolean() {
     let source: &str = "false; true;";
-    let mut lexer: Lexer<'_> = Lexer::new(source);
+    let mut lexer: Lexer<'_> = Lexer::new(source, "".to_string());
     lexer.scan_tokens();
 
     assert_eq!(lexer.tokens.len(), 5);

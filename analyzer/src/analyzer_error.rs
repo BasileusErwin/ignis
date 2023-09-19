@@ -1,4 +1,4 @@
-use ast::expression::{variable::VariableExpression, Expression};
+use ast::{expression::variable::VariableExpression, statement::import::ImportSymbol};
 use enums::data_type::DataType;
 use lexer::{token::Token, text_span::TextSpan};
 
@@ -26,11 +26,13 @@ pub enum AnalyzerDiagnosticError {
   CannotMultiply(AnalyzerValue, AnalyzerValue, Token),
   CannotDivide(AnalyzerValue, AnalyzerValue, Token),
   CannotModulo(AnalyzerValue, AnalyzerValue, Token),
-  FunctionAlreadyDefined(String),
+  FunctionAlreadyDefined(String, Token),
   ClassAlreadyDefined(String),
   ArgumentTypeMismatch(DataType, DataType, Token),
   ImmutableVariableAsMutableParameter(String, String, Token),
   ReturnOutsideFunction(Token),
   NotIterable(Token),
   ArrayElementTypeMismatch(Token),
+  ModuleNotFound(Token),
+  ImportedFunctionIsNotExported(Token),
 }

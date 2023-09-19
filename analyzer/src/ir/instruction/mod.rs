@@ -41,4 +41,5 @@ pub enum IRInstruction {
   Ternary(IRTernary),
   ForIn(IRForIn),
   Array(IRArray),
+  Import,
 }

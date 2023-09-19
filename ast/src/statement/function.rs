@@ -43,6 +43,7 @@ pub struct FunctionStatement {
   pub parameters: Vec<FunctionParameter>,
   pub body: Vec<Statement>,
   pub return_type: Option<DataType>,
+  pub is_exported: bool,
 }
 
 impl FunctionStatement {
@@ -51,12 +52,14 @@ impl FunctionStatement {
     parameters: Vec<FunctionParameter>,
     body: Vec<Statement>,
     return_type: Option<DataType>,
+    is_exported: bool,
   ) -> Self {
     Self {
       name,
       parameters,
       body,
       return_type,
+      is_exported
     }
   }
 }

@@ -1,4 +1,4 @@
-use enums::data_type::{DataType, self};
+use enums::data_type::DataType;
 
 use crate::ir::instruction_type::IRInstructionType;
 

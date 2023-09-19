@@ -27,22 +27,22 @@ class Main() {
 		let fact: int = factorial(num);
 
 		printFactorial(num, fact);
-		
+
 		let z: int = x + y;
-		
+
 		if (isEven(z)) {
 			println("z is even");
 		} else {
 			println("z is odd");
 		}
-		
+
 		let mut count: int = 0;
 
 		while (count < 5) {
 			println(count);
 			count = count + 1;
 		}
-		
+
 		let result: int = sum(x, y);
 
 		println("The sum is: " + toString(result));

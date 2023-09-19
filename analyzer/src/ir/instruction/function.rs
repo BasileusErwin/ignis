@@ -1,6 +1,22 @@
+use ast::statement::import::ImportSymbol;
 use enums::data_type::DataType;
 
 use super::{variable::IRVariable, block::IRBlock};
+
+#[derive(Debug, Clone)]
+pub struct IRFunctionMetadata {
+  pub is_recursive: bool,
+  pub is_exported: bool,
+}
+
+impl IRFunctionMetadata {
+  pub fn new(is_recursive: bool, is_exported: bool) -> Self {
+    Self {
+      is_recursive,
+      is_exported,
+    }
+  }
+}
 
 #[derive(Debug, Clone)]
 pub struct IRFunction {
@@ -8,7 +24,7 @@ pub struct IRFunction {
   pub parameters: Vec<IRVariable>,
   pub return_type: DataType,
   pub body: Option<Box<IRBlock>>,
-  pub is_recursive: bool,
+  pub metadata: IRFunctionMetadata,
 }
 
 impl IRFunction {
@@ -17,14 +33,14 @@ impl IRFunction {
     parameters: Vec<IRVariable>,
     return_type: DataType,
     body: Option<Box<IRBlock>>,
-    is_recursive: bool,
+    metadata: IRFunctionMetadata,
   ) -> Self {
     Self {
       name,
       parameters,
       return_type,
       body,
-      is_recursive,
+      metadata,
     }
   }
 }

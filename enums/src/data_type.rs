@@ -13,6 +13,7 @@ pub enum DataType {
   Void,
   Variable(String),
   Array(Box<DataType>),
+  Callable(Vec<DataType>, Box<DataType>),
   // TODO: Type non-primitive
   ClassType(String),
   GenericType {
@@ -72,6 +73,10 @@ impl DataType {
       DataType::AliasType(alias) => alias.clone(),
       DataType::Null => "Null".to_string(),
       DataType::Void => "Void".to_string(),
+      DataType::Callable(params, ret) => {
+        let params: Vec<String> = params.iter().map(|p| p.to_string()).collect();
+        format!("({}) -> {}", params.join(", "), ret.to_string())
+      }
     }
   }
 }

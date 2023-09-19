@@ -1,21 +1,8 @@
 import { toString } from "std:string";
 import { println } from "std:io";
-
-function sum(num: int, num2: int): int {
-	return num + num2;
-}
-
-function isEven(num: int): boolean {
-  return num % 3 == 0;
-}
-
-function factorial(n: int): int {
-  if (n <= 1) {
-    return 1;
-  }
-
-  return n * factorial(n - 1);
-}
+import { isEven } from "example/math/src/isEven";
+import { factorial } from "example/math/src/factorial";
+import { sum } from "example/math/src/sum";
 
 function printFactorial(num: int, fact: int): void {
 	println("The factorial of " + toString(num) + " is: " + toString(fact));

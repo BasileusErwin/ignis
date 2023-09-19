@@ -3,24 +3,16 @@ pub mod analyzer_value;
 pub mod debug;
 pub mod ir;
 
-use std::{collections::HashMap, vec};
+use std::{collections::HashMap, vec, fs};
 
 use analyzer_error::AnalyzerDiagnosticError;
 use analyzer_value::AnalyzerValue;
 use ast::{
   visitor::Visitor,
   expression::{
-    binary::Binary,
-    Expression,
-    literal::Literal,
-    unary::Unary,
-    grouping::Grouping,
-    logical::Logical,
-    assign::Assign,
-    variable::VariableExpression,
-    ternary::Ternary,
-    call::Call,
-    array::{Array, self},
+    binary::Binary, Expression, literal::Literal, unary::Unary, grouping::Grouping,
+    logical::Logical, assign::Assign, variable::VariableExpression, ternary::Ternary, call::Call,
+    array::Array,
   },
   statement::{
     Statement,
@@ -29,10 +21,11 @@ use ast::{
     variable::Variable,
     if_statement::IfStatement,
     while_statement::WhileStatement,
-    function::{FunctionStatement, FunctionParameter},
+    function::FunctionStatement,
     return_statement::Return,
     class::Class,
     for_in::ForIn,
+    import::{Import, ImportSymbol},
   },
 };
 use enums::{data_type::DataType, token_type::TokenType};
@@ -43,8 +36,8 @@ use ir::{
     logical::IRLogical,
     literal::IRLiteral,
     unary::IRUnary,
-    function::IRFunction,
-    variable::{IRVariable, IRVariableMetadata, self},
+    function::{IRFunction, IRFunctionMetadata},
+    variable::{IRVariable, IRVariableMetadata},
     block::IRBlock,
     assign::IRAssign,
     ternary::IRTernary,
@@ -57,6 +50,8 @@ use ir::{
   },
   instruction_type::IRInstructionType,
 };
+use lexer::Lexer;
+use parser::Parser;
 
 pub type AnalyzerResult = Result<IRInstruction, AnalyzerDiagnosticError>;
 type CheckCompatibility<T> = (bool, T);
@@ -164,7 +159,7 @@ impl Visitor<AnalyzerResult> for Analyzer {
 
     if let Some(f) = &mut self.current_function {
       if f.name == variable.name.span.literal {
-        f.is_recursive = true;
+        f.metadata.is_recursive = true;
 
         let instruction = IRInstruction::Function(f.clone());
 
@@ -332,7 +327,7 @@ impl Visitor<AnalyzerResult> for Analyzer {
         IRInstruction::Return(r) => r.data_type.clone(),
         IRInstruction::Binary(b) => b.data_type.clone(),
         IRInstruction::Unary(u) => u.data_type.clone(),
-        IRInstruction::Logical(l) => DataType::Boolean,
+        IRInstruction::Logical(_) => DataType::Boolean,
         _ => DataType::None,
       };
 
@@ -487,6 +482,14 @@ impl Visitor<AnalyzerResult> for Analyzer {
   fn visit_function_statement(&mut self, statement: &FunctionStatement) -> AnalyzerResult {
     self.begin_scope();
     let mut parameters = Vec::<IRVariable>::new();
+
+    if self.is_allready_declared(&statement.name.span.literal) {
+      return Err(AnalyzerDiagnosticError::FunctionAlreadyDefined(
+        statement.name.span.literal.clone(),
+        statement.name.clone(),
+      ));
+    }
+
     self.declare(&statement.name.span.literal);
     self.define(&statement.name.span.literal);
 
@@ -518,7 +521,7 @@ impl Visitor<AnalyzerResult> for Analyzer {
       parameters.clone(),
       statement.return_type.clone().unwrap_or(DataType::Void),
       None,
-      false,
+      IRFunctionMetadata::new(false, statement.is_exported),
     );
 
     self.current_function = Some(current_function.clone());
@@ -575,14 +578,13 @@ impl Visitor<AnalyzerResult> for Analyzer {
     Ok(instruction)
   }
 
-  fn visit_class_statement(&mut self, statement: &Class) -> AnalyzerResult {
+  fn visit_class_statement(&mut self, _statement: &Class) -> AnalyzerResult {
     todo!()
   }
 
   fn visit_array_expression(&mut self, expression: &Array) -> AnalyzerResult {
     let mut elements = Vec::new();
     let mut element_types = Vec::new();
-    let array_type = expression.data_type.clone();
 
     for elem in &expression.elements {
       let analyzed_elem = self.analyzer(elem)?;
@@ -654,41 +656,23 @@ impl Visitor<AnalyzerResult> for Analyzer {
 
     Ok(instruction)
   }
+
+  fn visit_import_statement(&mut self, statement: &Import) -> AnalyzerResult {
+    let mut block_stack: HashMap<String, bool> = self.block_stack.last_mut().unwrap().clone();
+    if !statement.is_std {
+      self.resolve_module_import(statement, &mut block_stack)?;
+    } else {
+      self.resolve_std_import(statement.module_path.span.literal.clone(), &mut block_stack);
+    }
+
+    Ok(IRInstruction::Import)
+  }
 }
 
 impl Analyzer {
   pub fn new() -> Self {
     let mut irs = Vec::<IRInstruction>::new();
-    irs.push(IRInstruction::Function(IRFunction::new(
-      "println".to_string(),
-      vec![IRVariable::new(
-        "message".to_string(),
-        DataType::None,
-        None,
-        IRVariableMetadata::new(false, false, true, false, false, false),
-      )],
-      DataType::Void,
-      None,
-      false,
-    )));
-
-    irs.push(IRInstruction::Function(IRFunction::new(
-      "toString".to_string(),
-      vec![IRVariable::new(
-        "value".to_string(),
-        DataType::None,
-        None,
-        IRVariableMetadata::new(false, false, true, false, false, false),
-      )],
-      DataType::String,
-      None,
-      false,
-    )));
-
     let mut block_stack: HashMap<String, bool> = HashMap::new();
-    block_stack.insert("println".to_string(), true);
-    block_stack.insert("toString".to_string(), true);
-
     Self {
       irs,
       diagnostics: Vec::new(),
@@ -747,6 +731,145 @@ impl Analyzer {
     current_block.insert(name.clone(), false);
   }
 
+  fn resolve_std_import(&mut self, lib: String, block_stack: &mut HashMap<String, bool>) {
+    match lib.clone().as_str() {
+      "std:io" => {
+        self.irs.push(IRInstruction::Function(IRFunction::new(
+          "println".to_string(),
+          vec![IRVariable::new(
+            "message".to_string(),
+            DataType::None,
+            None,
+            IRVariableMetadata::new(false, false, true, false, false, false),
+          )],
+          DataType::Void,
+          None,
+          IRFunctionMetadata::new(false, true),
+        )));
+
+        block_stack.insert("println".to_string(), true);
+      }
+      "std:string" => {
+        self.irs.push(IRInstruction::Function(IRFunction::new(
+          "toString".to_string(),
+          vec![IRVariable::new(
+            "value".to_string(),
+            DataType::None,
+            None,
+            IRVariableMetadata::new(false, false, true, false, false, false),
+          )],
+          DataType::String,
+          None,
+          IRFunctionMetadata::new(false, true),
+        )));
+
+        block_stack.insert("toString".to_string(), true);
+      }
+      &_ => {}
+    }
+  }
+
+  fn resolve_module_import(
+    &mut self,
+    statement: &Import,
+    block_stack: &mut HashMap<String, bool>,
+  ) -> Result<(), AnalyzerDiagnosticError> {
+    let mut analyzer = Analyzer::new();
+    match fs::read_to_string(format!("{}.{}", statement.module_path.span.literal, "ign")) {
+      Ok(source) => {
+        let mut lexer: Lexer<'_> = Lexer::new(&source, statement.module_path.span.literal.clone());
+        lexer.scan_tokens();
+
+        let mut parser: Parser = Parser::new(lexer.tokens);
+        let statements = parser.parse();
+
+        match statements {
+          Ok(parser_reult) => {
+            analyzer.analyze(&parser_reult);
+          }
+          Err(_) => {}
+        }
+      }
+      Err(_) => {
+        return Err(AnalyzerDiagnosticError::ModuleNotFound(
+          statement.module_path.clone(),
+        ))
+      }
+    };
+
+    analyzer.diagnostics.iter().for_each(|d| {
+      self.diagnostics.push(d.clone());
+    });
+
+    for ir in &analyzer.irs {
+      self.define_import(statement, ir.clone(), block_stack)?;
+    }
+
+    Ok(())
+  }
+
+  fn define_import(
+    &mut self,
+    statement: &Import,
+    ir: IRInstruction,
+    block_stack: &mut HashMap<String, bool>,
+  ) -> Result<(), AnalyzerDiagnosticError> {
+    match ir {
+      IRInstruction::Function(f) => {
+        for symbol in &statement.symbols {
+          if symbol.name.span.literal == f.name && !f.metadata.is_exported {
+            return Err(AnalyzerDiagnosticError::ImportedFunctionIsNotExported(
+              symbol.name.clone(),
+            ));
+          }
+
+          if symbol.name.span.literal == f.name && f.metadata.is_exported {
+            if symbol.alias.is_some() {
+              block_stack.insert(symbol.alias.as_ref().unwrap().span.literal.clone(), true);
+              self.irs.push(
+                IRInstruction::Function(IRFunction::new(
+                  symbol.alias.as_ref().unwrap().span.literal.clone(),
+                  f.parameters.clone(),
+                  f.return_type.clone(),
+                  f.body.clone(),
+                  f.metadata.clone(),
+                ))
+                .clone(),
+              );
+            } else {
+              block_stack.insert(symbol.name.span.literal.clone(), true);
+              let mut metadata = f.metadata.clone();
+              metadata.is_exported = false;
+              self.irs.push(
+                IRInstruction::Function(IRFunction::new(
+                  symbol.name.span.literal.clone(),
+                  f.parameters.clone(),
+                  f.return_type.clone(),
+                  f.body.clone(),
+                  metadata,
+                ))
+                .clone(),
+              );
+            }
+          }
+        }
+      }
+      _ => {}
+    };
+
+    return Ok(());
+  }
+
+  fn is_allready_declared(&self, name: &String) -> bool {
+    if self.block_stack.is_empty() {
+      return false;
+    }
+
+    let current_block = self.block_stack.last().unwrap();
+
+    current_block.get(name).is_some()
+  }
+
   fn define(&mut self, name: &String) {
     if self.block_stack.is_empty() {
       return;
@@ -767,7 +890,7 @@ impl Analyzer {
     current_block.insert(name.clone(), true);
   }
 
-  fn find_function_in_ir(&self, name: String) -> Option<IRFunction> {
+  fn _find_function_in_ir(&self, name: String) -> Option<IRFunction> {
     let irs = &self.irs;
 
     let function = irs.into_iter().find(|ir| match ir {

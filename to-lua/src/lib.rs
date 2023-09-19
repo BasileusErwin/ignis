@@ -1,5 +1,3 @@
-use std::ops::IndexMut;
-
 use analyzer::{
   ir::{
     instruction::{IRInstruction, function::IRFunction, call::IRCall, variable::IRVariable},
@@ -7,6 +5,10 @@ use analyzer::{
   },
   analyzer_value::AnalyzerValue,
 };
+
+struct State {
+  pub statement_exported: Vec<String>,
+}
 
 fn transpile_opeartor_to_lua(operator: &IRInstructionType) -> String {
   match operator {
@@ -32,7 +34,7 @@ fn transpile_opeartor_to_lua(operator: &IRInstructionType) -> String {
   .to_string()
 }
 
-fn transpile_function_to_lua(func: &IRFunction, indent_level: usize) -> String {
+fn transpile_function_to_lua(func: &IRFunction, indent_level: usize, state: &mut State) -> String {
   let mut code = String::new();
 
   if let Some(body) = &func.body {
@@ -43,7 +45,11 @@ fn transpile_function_to_lua(func: &IRFunction, indent_level: usize) -> String {
       .collect::<Vec<String>>()
       .join(", ");
 
-    if func.is_recursive {
+    if func.metadata.is_exported {
+      state.statement_exported.push(func.name.clone());
+    }
+
+    if func.metadata.is_recursive {
       code.push_str(&format!(
         "{}local {}\n",
         " ".repeat(indent_level),
@@ -131,48 +137,53 @@ fn transpile_variable_to_lua(variable: &IRVariable, indent_level: usize) -> Stri
 }
 
 pub fn transpile_ir_to_lua(instruction: &IRInstruction, indent_level: usize) -> String {
+  let mut code = String::new();
+  let mut state = State {
+    statement_exported: vec![],
+  };
+
   match instruction {
-    IRInstruction::Literal(literal) => match &literal.value {
-      AnalyzerValue::Int(num) => num.to_string(),
-      AnalyzerValue::String(s) => format!("\"{}\"", s),
-      AnalyzerValue::Double(num) => num.to_string(),
-      AnalyzerValue::Boolean(boolean) => boolean.to_string(),
-      AnalyzerValue::Return(r) => r.to_string(),
-      AnalyzerValue::Function(f) => f.name.span.literal.clone(),
-      AnalyzerValue::Null | AnalyzerValue::None => "nil".to_string(),
-    },
+    IRInstruction::Literal(literal) => {
+      code = match &literal.value {
+        AnalyzerValue::Int(num) => num.to_string(),
+        AnalyzerValue::String(s) => format!("\"{}\"", s),
+        AnalyzerValue::Double(num) => num.to_string(),
+        AnalyzerValue::Boolean(boolean) => boolean.to_string(),
+        AnalyzerValue::Return(r) => r.to_string(),
+        AnalyzerValue::Function(f) => f.name.span.literal.clone(),
+        AnalyzerValue::Null | AnalyzerValue::None => "nil".to_string(),
+      }
+    }
     IRInstruction::Binary(binary) => {
       let left = transpile_ir_to_lua(&binary.left, indent_level);
       let right = transpile_ir_to_lua(&binary.right, indent_level);
       let op = transpile_opeartor_to_lua(&binary.instruction_type);
 
-      format!("{} {} {}", left, op, right)
+      code = format!("{} {} {}", left, op, right);
     }
     IRInstruction::Block(block) => {
-      let mut code = String::new();
       for instr in &block.instructions {
         code.push_str(&transpile_ir_to_lua(instr, indent_level));
       }
-      code
     }
-    IRInstruction::Function(func) => transpile_function_to_lua(func, indent_level),
+    IRInstruction::Function(func) => {
+      code = transpile_function_to_lua(func, indent_level, &mut state);
+    }
     IRInstruction::Unary(unary) => {
       let value = transpile_ir_to_lua(&unary.right, indent_level);
       let op = transpile_opeartor_to_lua(&unary.instruction_type);
 
-      format!("{} {}", op, value)
+      code = format!("{} {}", op, value);
     }
-    IRInstruction::Variable(var) => transpile_variable_to_lua(var, indent_level),
+    IRInstruction::Variable(var) => code = transpile_variable_to_lua(var, indent_level),
     IRInstruction::Logical(logical) => {
       let left = transpile_ir_to_lua(&logical.left, indent_level);
       let right = transpile_ir_to_lua(&logical.right, indent_level);
       let op = transpile_opeartor_to_lua(&logical.instruction_type);
 
-      format!("{} {} {}", left, op, right)
+      code = format!("{} {} {}", left, op, right);
     }
     IRInstruction::If(if_instruction) => {
-      let mut code = String::new();
-
       code.push_str(&format!(
         "{}if {} then\n",
         " ".repeat(indent_level),
@@ -190,11 +201,8 @@ pub fn transpile_ir_to_lua(instruction: &IRInstruction, indent_level: usize) -> 
       }
 
       code.push_str(format!("{} end\n", " ".repeat(indent_level)).as_str());
-
-      code
     }
     IRInstruction::While(ir_while) => {
-      let mut code = String::new();
       let condition = transpile_ir_to_lua(&ir_while.condition, indent_level);
 
       code.push_str(&format!(
@@ -206,17 +214,15 @@ pub fn transpile_ir_to_lua(instruction: &IRInstruction, indent_level: usize) -> 
       code.push_str(&transpile_ir_to_lua(&ir_while.body, indent_level + 2));
 
       code.push_str(format!("{}end\n", " ".repeat(indent_level)).as_str());
-
-      code
     }
-    IRInstruction::Call(call) => transpile_call_to_lua(call, indent_level),
+    IRInstruction::Call(call) => code = transpile_call_to_lua(call, indent_level),
     IRInstruction::Return(r) => {
       let value = transpile_ir_to_lua(&r.value, indent_level);
-      format!("{}return {}\n", " ".repeat(indent_level), value)
+      code = format!("{}return {}\n", " ".repeat(indent_level), value);
     }
     IRInstruction::Assign(assign) => {
       let value = transpile_ir_to_lua(&assign.value, 0);
-      format!("{}{} = {}\n", " ".repeat(indent_level), assign.name, value)
+      code = format!("{}{} = {}\n", " ".repeat(indent_level), assign.name, value);
     }
     IRInstruction::Class(_) => todo!(),
     IRInstruction::Ternary(ternary) => {
@@ -225,11 +231,9 @@ pub fn transpile_ir_to_lua(instruction: &IRInstruction, indent_level: usize) -> 
       let then_branch = transpile_ir_to_lua(&ternary.then_branch, indent_level);
       let else_branch = transpile_ir_to_lua(&ternary.else_branch, indent_level);
 
-      format!("{} and {} or {}", condition, then_branch, else_branch)
+      code = format!("{} and {} or {}", condition, then_branch, else_branch);
     }
     IRInstruction::ForIn(for_in) => {
-      let mut code = String::new();
-
       code.push_str(&format!(
         "{}for _, {} in pairs({}) do\n",
         " ".repeat(indent_level),
@@ -240,12 +244,8 @@ pub fn transpile_ir_to_lua(instruction: &IRInstruction, indent_level: usize) -> 
       code.push_str(&transpile_ir_to_lua(&for_in.body, indent_level + 2));
 
       code.push_str(format!("{}end\n", " ".repeat(indent_level)).as_str());
-
-      code
     }
     IRInstruction::Array(array) => {
-      let mut code = String::new();
-
       code.push_str(&format!(
         "{}{{{}",
         " ".repeat(indent_level),
@@ -258,8 +258,19 @@ pub fn transpile_ir_to_lua(instruction: &IRInstruction, indent_level: usize) -> 
       ));
 
       code.push_str("}\n");
-
-      return code;
     }
+    IRInstruction::Import => (),
+  };
+
+  if !state.statement_exported.is_empty() {
+    code.push_str(&format!("{}return {{\n", " ".repeat(indent_level)));
+
+    for statement in &state.statement_exported {
+      code.push_str(&format!("{}{},\n", " ".repeat(indent_level + 2), statement,));
+    }
+
+    code.push_str(&format!("{}}}\n", " ".repeat(indent_level)));
   }
+
+  return code;
 }

@@ -1,10 +1,13 @@
 pub mod block;
 pub mod class;
+pub mod export;
 pub mod expression;
+pub mod extern_statement;
 pub mod for_in;
 pub mod forof;
 pub mod function;
 pub mod if_statement;
+pub mod import;
 pub mod return_statement;
 pub mod variable;
 pub mod while_statement;
@@ -14,10 +17,10 @@ use serde_json::json;
 use self::{
   expression::ExpressionStatement, variable::Variable, if_statement::IfStatement, block::Block,
   while_statement::WhileStatement, function::FunctionStatement, return_statement::Return,
-  class::Class, for_in::ForIn,
+  class::Class, for_in::ForIn, import::Import,
 };
 
-use crate::visitor::Visitor;
+use crate::{visitor::Visitor, statement::import::ImportSource};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Statement {
@@ -30,6 +33,7 @@ pub enum Statement {
   Return(Return),
   Class(Class),
   ForIn(ForIn),
+  Import(Import),
 }
 
 impl Statement {
@@ -46,6 +50,7 @@ impl Statement {
       Statement::Return(r) => visitor.visit_return_statement(r),
       Statement::Class(class) => visitor.visit_class_statement(class),
       Statement::ForIn(for_in) => visitor.visit_for_in_statement(for_in),
+      Statement::Import(import) => visitor.visit_import_statement(import),
     }
   }
 
@@ -128,6 +133,25 @@ impl Statement {
           "type": "ForIn",
           "iterable": for_in.iterable.to_json(),
           "body": for_in.body.to_json(),
+        })
+      }
+      Statement::Import(import) => {
+        let symbol = import
+          .symbols
+          .iter()
+          .map(|x| x.to_json())
+          .collect::<Vec<serde_json::Value>>();
+
+        json!({
+          "type": "Import",
+          "module_path": import.module_path.span.literal,
+          "symbol": symbol,
+          "is_std": import.is_std,
+          "source": match &import.source {
+            ImportSource::StandardLibrary => json!("StandardLibrary"),
+            ImportSource::FileSystem => json!("FileSystem"),
+            ImportSource::Package => json!("Package"),
+          },
         })
       }
     }

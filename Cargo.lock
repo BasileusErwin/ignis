@@ -9,6 +9,7 @@ dependencies = [
  "ast",
  "enums",
  "lexer",
+ "parser",
 ]
 
 [[package]]

@@ -7,8 +7,6 @@ use {
 };
 
 use analyzer::analyzer_value::AnalyzerValue;
-use ast::expression::{Expression, self};
-use enums::data_type;
 
 use super::DiagnosticList;
 
@@ -45,13 +43,15 @@ pub enum DiagnosticError {
   CannotMultiply(AnalyzerValue, AnalyzerValue, Token),
   CannotDivide(AnalyzerValue, AnalyzerValue, Token),
   CannotModulo(AnalyzerValue, AnalyzerValue, Token),
-  FunctionAlreadyDefined(String),
+  FunctionAlreadyDefined(String, Token),
   ClassAlreadyDefined(String),
   ArgumentTypeMismatch(DataType, DataType, Token),
   ImmutableVariableAsMutableParameter(String, String, Token),
   ReturnOutsideFunction(Token),
   NotIterable(Token),
   ArrayElementTypeMismatch(Token),
+  ModuleNotFound(Token),
+  ImportedFunctionIsNotExported(Token),
 }
 
 impl DiagnosticError {
@@ -110,8 +110,8 @@ impl DiagnosticError {
       AnalyzerDiagnosticError::CannotModulo(left, right, token) => {
         DiagnosticError::CannotModulo(left, right, token)
       }
-      AnalyzerDiagnosticError::FunctionAlreadyDefined(name) => {
-        DiagnosticError::FunctionAlreadyDefined(name)
+      AnalyzerDiagnosticError::FunctionAlreadyDefined(name, token) => {
+        DiagnosticError::FunctionAlreadyDefined(name, token)
       }
       AnalyzerDiagnosticError::ClassAlreadyDefined(name) => {
         DiagnosticError::ClassAlreadyDefined(name)
@@ -135,6 +135,10 @@ impl DiagnosticError {
       AnalyzerDiagnosticError::NotIterable(token) => DiagnosticError::NotIterable(token),
       AnalyzerDiagnosticError::ArrayElementTypeMismatch(token) => {
         DiagnosticError::ArrayElementTypeMismatch(token)
+      }
+      AnalyzerDiagnosticError::ModuleNotFound(token) => DiagnosticError::ModuleNotFound(token),
+      AnalyzerDiagnosticError::ImportedFunctionIsNotExported(token) => {
+        DiagnosticError::ImportedFunctionIsNotExported(token)
       }
     }
   }
@@ -267,8 +271,8 @@ impl DiagnosticError {
       DiagnosticError::CannotModulo(left, right, token) => {
         diagnostics.report_cannot_modulo(&left, &right, &token);
       }
-      DiagnosticError::FunctionAlreadyDefined(name) => {
-        diagnostics.report_function_already_defined(&name);
+      DiagnosticError::FunctionAlreadyDefined(name, token) => {
+        diagnostics.report_function_already_defined(&name, token);
       }
       DiagnosticError::ClassAlreadyDefined(name) => {
         diagnostics.report_class_already_defined(&name);
@@ -298,6 +302,12 @@ impl DiagnosticError {
       }
       DiagnosticError::ArrayElementTypeMismatch(token) => {
         diagnostics.report_array_element_type_mismatch(token);
+      }
+      DiagnosticError::ModuleNotFound(token) => {
+        diagnostics.report_module_not_found(token);
+      }
+      DiagnosticError::ImportedFunctionIsNotExported(token) => {
+        diagnostics.report_imported_function_is_not_exported(token);
       }
     }
   }

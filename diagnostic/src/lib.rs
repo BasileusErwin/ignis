@@ -3,8 +3,6 @@ pub mod warning;
 
 use std::fmt::Display;
 
-use ast::expression::Expression;
-
 use {
   lexer::{text_span::TextSpan, token::Token},
   ast::expression::variable::VariableExpression,
@@ -32,11 +30,22 @@ pub struct Diagnostic {
   pub code: DiagnosticLevel,
   pub span: Box<TextSpan>,
   pub hint: Option<String>,
+  pub module_path: Option<String>,
 }
 
 impl Diagnostic {
-  pub fn new(code: DiagnosticLevel, span: Box<TextSpan>, hint: Option<String>) -> Self {
-    Self { code, span, hint }
+  pub fn new(
+    code: DiagnosticLevel,
+    span: Box<TextSpan>,
+    hint: Option<String>,
+    module_path: Option<String>,
+  ) -> Self {
+    Self {
+      code,
+      span,
+      hint,
+      module_path,
+    }
   }
 }
 
@@ -57,18 +66,22 @@ impl DiagnosticList {
   }
 
   pub fn report_error(&mut self, message: String, span: TextSpan) {
+    let module_path = span.file.clone();
     self.diagnostics.push(Diagnostic::new(
       DiagnosticLevel::Error,
       Box::new(span),
       Some(message),
+      Some(module_path),
     ));
   }
 
   pub fn report_warning(&mut self, message: String, span: TextSpan) {
+    let module_path = span.file.clone();
     self.diagnostics.push(Diagnostic::new(
       DiagnosticLevel::Warning,
       Box::new(span),
       Some(message),
+      Some(module_path),
     ));
   }
 
@@ -261,7 +274,7 @@ impl DiagnosticList {
   fn report_invalid_argument_type(&mut self, argument: &AnalyzerValue) {
     self.report_error(
       format!("Invalid argument type '{}'", argument.to_string()),
-      TextSpan::new(0, 0, 0, argument.to_string(), 0),
+      TextSpan::new(0, 0, 0, argument.to_string(), 0, "".to_string()),
     );
   }
 
@@ -302,7 +315,7 @@ impl DiagnosticList {
         name,
         data_type.to_string()
       ),
-      TextSpan::new(0, 0, 0, name.to_string(), 0),
+      TextSpan::new(0, 0, 0, name.to_string(), 0, "".to_string()),
     );
   }
 
@@ -376,14 +389,14 @@ impl DiagnosticList {
   fn report_class_already_defined(&mut self, name: &str) {
     self.report_error(
       format!("Class '{}' was already defined", name),
-      TextSpan::new(0, 0, 0, name.to_string(), 0),
+      TextSpan::new(0, 0, 0, name.to_string(), 0, "".to_string()),
     );
   }
 
-  fn report_function_already_defined(&mut self, name: &str) {
+  fn report_function_already_defined(&mut self, name: &str, token: &Token) {
     self.report_error(
       format!("Function '{}' was already defined", name),
-      TextSpan::new(0, 0, 0, name.to_string(), 0),
+      token.span.clone(),
     );
   }
 
@@ -423,5 +436,19 @@ impl DiagnosticList {
 
   fn report_array_element_type_mismatch(&mut self, token: &Token) {
     self.report_error(format!("Array element type mismatch"), token.span.clone())
+  }
+
+  fn report_module_not_found(&mut self, token: &Token) {
+    self.report_error(
+      format!("Module not found: {}", token.span.literal),
+      token.span.clone(),
+    )
+  }
+
+  fn report_imported_function_is_not_exported(&mut self, token: &Token) {
+    self.report_error(
+      format!("Imported function is not exported: {}", token.span.literal),
+      token.span.clone(),
+    )
   }
 }

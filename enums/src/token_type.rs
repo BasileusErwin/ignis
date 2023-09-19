@@ -3,7 +3,7 @@ use std::fmt::{Display, Formatter};
 /**
   TokenType
 */
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenType {
   // Single-character tokens
   Plus,         // +
@@ -87,6 +87,7 @@ pub enum TokenType {
   Implements,
   Interface,
   Void,
+  Extern,
 
   Bad,
   Identifier,
@@ -171,6 +172,7 @@ impl TokenType {
       TokenType::Bad => "bad".to_string(),
       TokenType::Identifier => "identifier".to_string(),
       TokenType::Eof => "eof".to_string(),
+      TokenType::Extern => "extern".to_string(),
       _ => String::new(),
     }
   }
@@ -254,6 +256,7 @@ impl Display for TokenType {
       TokenType::QuestionMark => write!(f, "?"),
       TokenType::Void => write!(f, "void"),
       TokenType::Comment => write!(f, "comment"),
+      TokenType::Extern => write!(f, "extern"),
     }
   }
 }

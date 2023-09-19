@@ -1,6 +1,4 @@
-use crate::ir::instruction::{
-  IRInstruction, self, block::IRBlock, variable::IRVariable, literal::IRLiteral,
-};
+use crate::ir::instruction::{IRInstruction, block::IRBlock, variable::IRVariable, literal::IRLiteral};
 
 pub fn display_ir(instruction: &IRInstruction, indent_level: usize) {
   let indent = "  ".repeat(indent_level);
@@ -155,6 +153,9 @@ pub fn display_ir(instruction: &IRInstruction, indent_level: usize) {
           display_ir(element, indent_level);
         }
       }
+    }
+    IRInstruction::Import => {
+      println!("{}Import", indent);
     }
   };
 }

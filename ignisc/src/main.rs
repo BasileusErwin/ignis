@@ -3,26 +3,21 @@ use std::{
   env,
   process::exit,
   fs,
-  fmt::format,
 };
 
-use serde_json;
-
-use analyzer::{
-  Analyzer,
-  debug::{display_ir, display_block},
-};
+use analyzer::Analyzer;
 use parser::Parser;
 use lexer::Lexer;
-use ast::{Ast, statement};
+use ast::Ast;
 use to_lua::transpile_ir_to_lua;
 use diagnostic::{DiagnosticList, error::DiagnosticError};
 use evaluator::Evaluator;
 
 fn display_diagnostic(diagnostics: &DiagnosticList, relp: bool) {
   for diagnostic in diagnostics.diagnostics.iter() {
+    println!("- {}", diagnostic.module_path.as_ref().unwrap());
     println!("{}: {}", diagnostic.code, diagnostic.hint.as_ref().unwrap());
-    if relp {
+    if !relp {
       println!("{} | {}", diagnostic.span.line, diagnostic.span.literal);
       println!("Column: {}", diagnostic.span.end - diagnostic.span.start);
     }
@@ -33,11 +28,11 @@ fn run_file(path: &str) -> Result<(), ()> {
   let mut evaluator = Evaluator::new();
 
   match fs::read_to_string(path) {
-    Ok(content) => match run(content, &mut evaluator, false) {
+    Ok(content) => match run(content, path.to_string(), &mut evaluator, false) {
       Ok(result) => {
-        let mut path = path.split("/").collect::<Vec<&str>>();
+        let path = path.split("/").collect::<Vec<&str>>();
 
-        fs::write(path.last().unwrap().replace(r"ign", "lua"), result);
+        fs::write(path.last().unwrap().replace(r"ign", "lua"), result).unwrap();
 
         return Ok(());
       }
@@ -52,8 +47,13 @@ fn run_file(path: &str) -> Result<(), ()> {
   }
 }
 
-fn run(source: String, evaluator: &mut Evaluator, relp: bool) -> Result<String, ()> {
-  let mut lexer: Lexer<'_> = Lexer::new(&source);
+fn run(
+  source: String,
+  module_path: String,
+  _evaluator: &mut Evaluator,
+  relp: bool,
+) -> Result<String, ()> {
+  let mut lexer: Lexer<'_> = Lexer::new(&source, module_path.clone());
   lexer.scan_tokens();
 
   // lexer.display_lexer();
@@ -165,7 +165,7 @@ fn run_prompt() -> Result<(), String> {
       continue;
     }
 
-    match run(buffer, &mut evaluator, false) {
+    match run(buffer, "".to_string(), &mut evaluator, false) {
       Ok(_) => (),
       Err(()) => (),
     }

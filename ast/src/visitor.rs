@@ -7,7 +7,7 @@ use crate::{
   statement::{
     expression::ExpressionStatement, variable::Variable, if_statement::IfStatement, block::Block,
     while_statement::WhileStatement, function::FunctionStatement, return_statement::Return,
-    class::Class, for_in::ForIn,
+    class::Class, for_in::ForIn, import::Import,
   },
 };
 
@@ -34,4 +34,5 @@ pub trait Visitor<R> {
   fn visit_return_statement(&mut self, statement: &Return) -> R;
   fn visit_class_statement(&mut self, statement: &Class) -> R;
   fn visit_for_in_statement(&mut self, statement: &ForIn) -> R;
+  fn visit_import_statement(&mut self, statement: &Import) -> R;
 }

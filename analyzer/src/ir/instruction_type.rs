@@ -1,5 +1,4 @@
 use enums::token_type::TokenType;
-use lexer::token::Token;
 
 #[derive(Debug, Clone)]
 pub enum IRInstructionType {

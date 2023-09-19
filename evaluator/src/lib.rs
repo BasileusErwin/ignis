@@ -374,6 +374,13 @@ impl Visitor<EvaluatorResult<EvaluatorValue>> for Evaluator {
   ) -> EvaluatorResult<EvaluatorValue> {
     todo!()
   }
+
+  fn visit_import_statement(
+    &mut self,
+    statement: &ast::statement::import::Import,
+  ) -> EvaluatorResult<EvaluatorValue> {
+    todo!()
+  }
 }
 
 impl Evaluator {
