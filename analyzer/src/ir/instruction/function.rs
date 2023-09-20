@@ -1,4 +1,3 @@
-use ast::statement::import::ImportSymbol;
 use enums::data_type::DataType;
 
 use super::{variable::IRVariable, block::IRBlock};
@@ -7,13 +6,15 @@ use super::{variable::IRVariable, block::IRBlock};
 pub struct IRFunctionMetadata {
   pub is_recursive: bool,
   pub is_exported: bool,
+  pub is_imported: bool,
 }
 
 impl IRFunctionMetadata {
-  pub fn new(is_recursive: bool, is_exported: bool) -> Self {
+  pub fn new(is_recursive: bool, is_exported: bool, is_imported: bool) -> Self {
     Self {
       is_recursive,
       is_exported,
+      is_imported,
     }
   }
 }

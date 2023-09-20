@@ -5,13 +5,24 @@ use std::{
   fs,
 };
 
-use analyzer::Analyzer;
+use analyzer::{Analyzer, debug::display_ir};
 use parser::Parser;
 use lexer::Lexer;
 use ast::Ast;
-use to_lua::transpile_ir_to_lua;
+use to_lua::TranspilerToLua;
 use diagnostic::{DiagnosticList, error::DiagnosticError};
 use evaluator::Evaluator;
+
+struct CodeResult {
+  pub code: String,
+  pub file_name: String,
+}
+
+impl CodeResult {
+  pub fn new(code: String, file_name: String) -> Self {
+    Self { code, file_name }
+  }
+}
 
 fn display_diagnostic(diagnostics: &DiagnosticList, relp: bool) {
   for diagnostic in diagnostics.diagnostics.iter() {
@@ -30,9 +41,23 @@ fn run_file(path: &str) -> Result<(), ()> {
   match fs::read_to_string(path) {
     Ok(content) => match run(content, path.to_string(), &mut evaluator, false) {
       Ok(result) => {
-        let path = path.split("/").collect::<Vec<&str>>();
+        for code_result in result {
+          let mut path = code_result.file_name.split("/").collect::<Vec<&str>>();
+          let code = code_result.code.clone();
 
-        fs::write(path.last().unwrap().replace(r"ign", "lua"), result).unwrap();
+          let mut name = path.last().unwrap().replace(r".ign", "");
+
+          name.push_str(".lua");
+          path.pop();
+
+          let mut build_path = "build/".to_string() + path.join("/").as_str();
+
+          fs::create_dir_all(build_path.clone()).unwrap();
+
+          build_path.push_str(format!("/{}", &name).as_str());
+
+          fs::write(build_path, code).unwrap();
+        }
 
         return Ok(());
       }
@@ -52,7 +77,7 @@ fn run(
   module_path: String,
   _evaluator: &mut Evaluator,
   relp: bool,
-) -> Result<String, ()> {
+) -> Result<Vec<CodeResult>, ()> {
   let mut lexer: Lexer<'_> = Lexer::new(&source, module_path.clone());
   lexer.scan_tokens();
 
@@ -79,7 +104,7 @@ fn run(
   // let pretty_string = serde_json::to_string_pretty(&ast.to_json()).unwrap();
   // println!("{}", pretty_string);
 
-  let mut analyzer = Analyzer::new();
+  let mut analyzer = Analyzer::new(module_path.clone());
 
   analyzer.analyze(&mut ast.statements);
 
@@ -94,14 +119,20 @@ fn run(
   //   display_block(&block.clone(), "Block", 1);
   // }
 
-  // for ir in &analyzer.irs {
-  //   display_ir(ir, 1);
-  // }
+  for result in &analyzer.irs {
+    println!("IR for {}", result.0);
+    for ir in result.1 {
+      display_ir(ir, 1);
+    }
+  }
 
-  let mut code = String::new();
+  let mut transpiler = TranspilerToLua::new();
+  let mut code_results: Vec<CodeResult> = vec![];
 
-  for ir in analyzer.irs.iter() {
-    code = code + transpile_ir_to_lua(&ir, 0).as_str();
+  for result in analyzer.irs.iter() {
+    transpiler.transpile(result.1);
+
+    code_results.push(CodeResult::new(transpiler.code.clone(), result.0.clone()));
   }
 
   // visit(ast.statements, &mut diagnostics, evaluator);
@@ -114,14 +145,9 @@ fn run(
     }
   }
 
-  if relp {
-    println!("{}", code);
-    return Ok(String::new());
-  }
-
   diagnostics.clean_diagnostic();
 
-  return Ok(code);
+  return Ok(code_results);
 }
 
 fn run_prompt() -> Result<(), String> {

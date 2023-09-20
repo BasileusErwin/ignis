@@ -15,12 +15,13 @@ pub mod logical;
 pub mod ternary;
 pub mod unary;
 pub mod variable;
+pub mod import;
 
 use self::{
   binary::IRBinary, block::IRBlock, literal::IRLiteral, unary::IRUnary, variable::IRVariable,
   logical::IRLogical, ir_if::IRIf, ir_while::IRWhile, function::IRFunction, call::IRCall,
   class::IRClass, assign::IRAssign, ir_return::IRReturn, ternary::IRTernary, ir_for_in::IRForIn,
-  ir_array::IRArray,
+  ir_array::IRArray, import::IRImport,
 };
 
 #[derive(Debug, Clone)]
@@ -41,5 +42,5 @@ pub enum IRInstruction {
   Ternary(IRTernary),
   ForIn(IRForIn),
   Array(IRArray),
-  Import,
+  Import(IRImport),
 }

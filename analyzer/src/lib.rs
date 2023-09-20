@@ -15,17 +15,9 @@ use ast::{
     array::Array,
   },
   statement::{
-    Statement,
-    expression::ExpressionStatement,
-    block::Block,
-    variable::Variable,
-    if_statement::IfStatement,
-    while_statement::WhileStatement,
-    function::FunctionStatement,
-    return_statement::Return,
-    class::Class,
-    for_in::ForIn,
-    import::{Import, ImportSymbol},
+    Statement, expression::ExpressionStatement, block::Block, variable::Variable,
+    if_statement::IfStatement, while_statement::WhileStatement, function::FunctionStatement,
+    return_statement::Return, class::Class, for_in::ForIn, import::Import,
   },
 };
 use enums::{data_type::DataType, token_type::TokenType};
@@ -47,21 +39,23 @@ use ir::{
     ir_return::IRReturn,
     ir_for_in::IRForIn,
     ir_array::IRArray,
+    import::IRImport,
   },
   instruction_type::IRInstructionType,
 };
-use lexer::Lexer;
+use lexer::{Lexer, token::Token};
 use parser::Parser;
 
 pub type AnalyzerResult = Result<IRInstruction, AnalyzerDiagnosticError>;
 type CheckCompatibility<T> = (bool, T);
 
 pub struct Analyzer {
-  pub irs: Vec<IRInstruction>,
+  pub irs: HashMap<String, Vec<IRInstruction>>,
   pub block_stack: Vec<HashMap<String, bool>>,
   pub diagnostics: Vec<AnalyzerDiagnosticError>,
   pub scopes_variables: Vec<IRVariable>,
   pub current_function: Option<IRFunction>,
+  pub current_file: String,
 }
 
 impl Visitor<AnalyzerResult> for Analyzer {
@@ -143,7 +137,7 @@ impl Visitor<AnalyzerResult> for Analyzer {
       ));
     }
 
-    let irs = &self.irs;
+    let irs = &self.irs.get(&self.current_file).unwrap();
     let is_function = irs.into_iter().find(|ir| match ir {
       IRInstruction::Function(f) => f.name == variable.name.span.literal,
       _ => false,
@@ -521,7 +515,7 @@ impl Visitor<AnalyzerResult> for Analyzer {
       parameters.clone(),
       statement.return_type.clone().unwrap_or(DataType::Void),
       None,
-      IRFunctionMetadata::new(false, statement.is_exported),
+      IRFunctionMetadata::new(false, statement.is_exported, false),
     );
 
     self.current_function = Some(current_function.clone());
@@ -659,26 +653,39 @@ impl Visitor<AnalyzerResult> for Analyzer {
 
   fn visit_import_statement(&mut self, statement: &Import) -> AnalyzerResult {
     let mut block_stack: HashMap<String, bool> = self.block_stack.last_mut().unwrap().clone();
+
     if !statement.is_std {
       self.resolve_module_import(statement, &mut block_stack)?;
     } else {
       self.resolve_std_import(statement.module_path.span.literal.clone(), &mut block_stack);
     }
 
-    Ok(IRInstruction::Import)
+    Ok(IRInstruction::Import(IRImport::new(
+      statement
+        .symbols
+        .clone()
+        .into_iter()
+        .map(|i| (i.name, i.alias))
+        .collect::<Vec<(Token, Option<Token>)>>(),
+      statement.module_path.span.literal.clone(),
+    )))
   }
 }
 
 impl Analyzer {
-  pub fn new() -> Self {
-    let mut irs = Vec::<IRInstruction>::new();
-    let mut block_stack: HashMap<String, bool> = HashMap::new();
+  pub fn new(current_file: String) -> Self {
+    let mut irs = HashMap::new();
+    let block_stack: HashMap<String, bool> = HashMap::new();
+
+    irs.insert(current_file.clone(), Vec::new());
+
     Self {
       irs,
       diagnostics: Vec::new(),
       block_stack: vec![block_stack],
       scopes_variables: Vec::new(),
       current_function: None,
+      current_file,
     }
   }
 
@@ -686,11 +693,12 @@ impl Analyzer {
     for statement in statements {
       match self.analyze_statement(statement) {
         Ok(ir) => {
-          self.irs.push(ir.clone());
+          let mut current_ir = self.irs.get_mut(&self.current_file).unwrap();
+          current_ir.push(ir.clone());
 
           if let IRInstruction::Function(f) = ir {
             if f.name == "main" {
-              self.irs.push(IRInstruction::Call(IRCall::new(
+              current_ir.push(IRInstruction::Call(IRCall::new(
                 "main".to_string(),
                 Vec::new(),
                 DataType::Void,
@@ -732,9 +740,10 @@ impl Analyzer {
   }
 
   fn resolve_std_import(&mut self, lib: String, block_stack: &mut HashMap<String, bool>) {
+    let mut currnet_ir = self.irs.get_mut(&self.current_file).unwrap();
     match lib.clone().as_str() {
       "std:io" => {
-        self.irs.push(IRInstruction::Function(IRFunction::new(
+        currnet_ir.push(IRInstruction::Function(IRFunction::new(
           "println".to_string(),
           vec![IRVariable::new(
             "message".to_string(),
@@ -744,13 +753,13 @@ impl Analyzer {
           )],
           DataType::Void,
           None,
-          IRFunctionMetadata::new(false, true),
+          IRFunctionMetadata::new(false, true, true),
         )));
 
         block_stack.insert("println".to_string(), true);
       }
       "std:string" => {
-        self.irs.push(IRInstruction::Function(IRFunction::new(
+        currnet_ir.push(IRInstruction::Function(IRFunction::new(
           "toString".to_string(),
           vec![IRVariable::new(
             "value".to_string(),
@@ -760,7 +769,7 @@ impl Analyzer {
           )],
           DataType::String,
           None,
-          IRFunctionMetadata::new(false, true),
+          IRFunctionMetadata::new(false, true, true),
         )));
 
         block_stack.insert("toString".to_string(), true);
@@ -774,7 +783,7 @@ impl Analyzer {
     statement: &Import,
     block_stack: &mut HashMap<String, bool>,
   ) -> Result<(), AnalyzerDiagnosticError> {
-    let mut analyzer = Analyzer::new();
+    let mut analyzer = Analyzer::new(statement.module_path.span.literal.clone());
     match fs::read_to_string(format!("{}.{}", statement.module_path.span.literal, "ign")) {
       Ok(source) => {
         let mut lexer: Lexer<'_> = Lexer::new(&source, statement.module_path.span.literal.clone());
@@ -801,9 +810,20 @@ impl Analyzer {
       self.diagnostics.push(d.clone());
     });
 
-    for ir in &analyzer.irs {
+    let current_ir = analyzer
+      .irs
+      .get(&statement.module_path.span.literal)
+      .unwrap()
+      .clone();
+
+    for ir in &current_ir {
       self.define_import(statement, ir.clone(), block_stack)?;
     }
+
+    self.irs.insert(
+      statement.module_path.span.literal.clone(),
+      current_ir.clone(),
+    );
 
     Ok(())
   }
@@ -814,6 +834,8 @@ impl Analyzer {
     ir: IRInstruction,
     block_stack: &mut HashMap<String, bool>,
   ) -> Result<(), AnalyzerDiagnosticError> {
+    let mut current_ir = self.irs.get_mut(&self.current_file).unwrap();
+
     match ir {
       IRInstruction::Function(f) => {
         for symbol in &statement.symbols {
@@ -824,23 +846,24 @@ impl Analyzer {
           }
 
           if symbol.name.span.literal == f.name && f.metadata.is_exported {
+            let mut metadata = f.metadata.clone();
+            metadata.is_imported = true;
             if symbol.alias.is_some() {
               block_stack.insert(symbol.alias.as_ref().unwrap().span.literal.clone(), true);
-              self.irs.push(
+              current_ir.push(
                 IRInstruction::Function(IRFunction::new(
                   symbol.alias.as_ref().unwrap().span.literal.clone(),
                   f.parameters.clone(),
                   f.return_type.clone(),
                   f.body.clone(),
-                  f.metadata.clone(),
+                  metadata,
                 ))
                 .clone(),
               );
             } else {
               block_stack.insert(symbol.name.span.literal.clone(), true);
-              let mut metadata = f.metadata.clone();
               metadata.is_exported = false;
-              self.irs.push(
+              current_ir.push(
                 IRInstruction::Function(IRFunction::new(
                   symbol.name.span.literal.clone(),
                   f.parameters.clone(),
@@ -891,7 +914,7 @@ impl Analyzer {
   }
 
   fn _find_function_in_ir(&self, name: String) -> Option<IRFunction> {
-    let irs = &self.irs;
+    let irs = self.irs.get(&self.current_file).unwrap();
 
     let function = irs.into_iter().find(|ir| match ir {
       IRInstruction::Function(f) => f.name == name,

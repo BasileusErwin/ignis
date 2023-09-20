@@ -154,8 +154,18 @@ pub fn display_ir(instruction: &IRInstruction, indent_level: usize) {
         }
       }
     }
-    IRInstruction::Import => {
-      println!("{}Import", indent);
+    IRInstruction::Import(import) => {
+      println!(
+        "{}Import: modules: {} | path: {}",
+        indent,
+        import
+          .name
+          .iter()
+          .map(|(name, _)| name.span.literal.clone())
+          .collect::<Vec<String>>()
+          .join("."),
+        import.path
+      );
     }
   };
 }

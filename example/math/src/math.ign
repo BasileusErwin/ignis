@@ -1,0 +1,15 @@
+export function factorial(n: int): int {
+  if (n <= 1) {
+    return 1;
+  }
+
+  return n * factorial(n - 1);
+}
+
+export function isEven(num: int): boolean {
+  return num % 3 == 0;
+}
+
+export function sum(num: int, num2: int): int {
+	return num + num2;
+}
