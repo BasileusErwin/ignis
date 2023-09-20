@@ -59,7 +59,7 @@ impl FunctionStatement {
       parameters,
       body,
       return_type,
-      is_exported
+      is_exported,
     }
   }
 }

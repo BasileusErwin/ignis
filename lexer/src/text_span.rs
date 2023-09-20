@@ -9,7 +9,14 @@ pub struct TextSpan {
 }
 
 impl TextSpan {
-  pub fn new(start: usize, end: usize, line: usize, literal: String, column: usize, file: String) -> Self {
+  pub fn new(
+    start: usize,
+    end: usize,
+    line: usize,
+    literal: String,
+    column: usize,
+    file: String,
+  ) -> Self {
     Self {
       start,
       end,

@@ -10,9 +10,6 @@ pub struct IRImport {
 
 impl IRImport {
   pub fn new(name: ImportName, path: String) -> Self {
-    Self {
-      name,
-      path,
-    }
+    Self { name, path }
   }
 }

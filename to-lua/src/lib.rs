@@ -187,11 +187,9 @@ impl TranspilerToLua {
               value = name.span.literal.clone();
             }
 
-            self
-              .statement_imported
-              .insert(value, module_name.clone());
+            self.statement_imported.insert(value, module_name.clone());
           }
-          
+
           code.push_str(&format!(
             "{}local {} = require(\"{}\")\n",
             " ".repeat(indent_level),

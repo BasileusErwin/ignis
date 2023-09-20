@@ -18,7 +18,7 @@ impl ImportSymbol {
   pub fn new(name: Token, alias: Option<Token>) -> Self {
     Self { name, alias }
   }
-  
+
   pub fn to_json(&self) -> serde_json::Value {
     match &self.alias {
       Some(alias) => json!({
@@ -35,7 +35,7 @@ impl ImportSymbol {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Import {
   pub module_path: Token,
-	pub symbols: Vec<ImportSymbol>,
+  pub symbols: Vec<ImportSymbol>,
   pub is_std: bool,
   pub source: ImportSource,
 }
@@ -43,13 +43,13 @@ pub struct Import {
 impl Import {
   pub fn new(
     module_path: Token,
-		symbols: Vec<ImportSymbol>,
+    symbols: Vec<ImportSymbol>,
     is_std: bool,
     source: ImportSource,
   ) -> Self {
     Self {
       module_path,
-			symbols,
+      symbols,
       is_std,
       source,
     }
