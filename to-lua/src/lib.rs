@@ -35,15 +35,21 @@ impl TranspilerToLua {
     }
 
     if !self.statement_exported.is_empty() {
-      self.code.push_str(&format!("{}return {{\n", " ".repeat(0)));
+      self.code.push_str("local M = {}\n");
 
       for statement in &self.statement_exported {
-        self
-          .code
-          .push_str(&format!("{}{},\n", " ".repeat(2), statement.0));
+        self.code.push_str(
+          format!(
+            "{}M.{} = {}\n",
+            " ".repeat(2),
+            statement.0.as_str(),
+            statement.0
+          )
+          .as_str(),
+        );
       }
 
-      self.code.push_str(&format!("{}}}\n", " ".repeat(0)));
+      self.code.push_str(&format!("{}return M\n", " ".repeat(0)));
     }
   }
 
@@ -191,7 +197,7 @@ impl TranspilerToLua {
           }
 
           code.push_str(&format!(
-            "{}local {} = require(\"{}\")\n",
+            "{}local {} = require(\"build.{}\")\n",
             " ".repeat(indent_level),
             module_name,
             module_path.join("."),
