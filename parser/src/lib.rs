@@ -6,6 +6,7 @@ use ast::{
     variable::VariableMetadata,
     for_in::ForIn,
     import::{Import, ImportSource, ImportSymbol},
+    function::FunctionDecorator,
   },
   expression::array::Array,
 };
@@ -379,7 +380,7 @@ impl Parser {
     }
 
     if self.match_token(&[TokenType::Function]) {
-      return self.function(FunctionKind::Function, false);
+      return self.function(FunctionKind::Function, false, None);
     }
 
     if self.match_token(&[TokenType::Return]) {
@@ -400,6 +401,10 @@ impl Parser {
 
     if self.match_token(&[TokenType::Export]) {
       return self.export_statement();
+    }
+
+    if self.match_token(&[TokenType::At]) {
+      return self.decoration_statement();
     }
 
     match self.statement() {
@@ -427,85 +432,103 @@ impl Parser {
     Ok(Statement::Return(result))
   }
 
-  fn function(&mut self, kind: FunctionKind, is_public: bool) -> ParserResult<Statement> {
-    match kind {
-      FunctionKind::Function => {
-        let name: Token = self.consume(TokenType::Identifier)?;
+  fn function_statement(
+    &mut self,
+    is_public: bool,
+    decorator: Option<FunctionDecorator>,
+  ) -> ParserResult<Statement> {
+    let name: Token = self.consume(TokenType::Identifier)?;
 
-        self.consume(TokenType::LeftParen)?;
+    self.consume(TokenType::LeftParen)?;
 
-        let mut parameters: Vec<FunctionParameter> = Vec::new();
+    let mut parameters: Vec<FunctionParameter> = Vec::new();
 
-        if !self.check(TokenType::RightParen) {
-          loop {
-            if parameters.len() >= 255 {
-              return Err(ParserDiagnosticError::InvalidNumberOfArguments(
-                255,
-                parameters.len(),
-                name.clone(),
-              ));
-            }
-
-            let is_mut: bool = if self.peek().kind == TokenType::Mut {
-              self.advance();
-              true
-            } else {
-              false
-            };
-
-            let param = self.consume(TokenType::Identifier)?;
-
-            self.consume(TokenType::Colon)?;
-            let token = self.advance();
-
-            parameters.push(FunctionParameter::new(
-              param,
-              DataType::from_token_type(token.kind),
-              is_mut,
-            ));
-
-            if !self.match_token(&[TokenType::Comma]) {
-              break;
-            }
-          }
-        }
-
-        self.consume(TokenType::RightParen)?;
-
-        self.consume(TokenType::Colon)?;
-
-        let return_type: Option<DataType>;
-        if self.match_token(&[
-          TokenType::Void,
-          TokenType::IntType,
-          TokenType::DoubleType,
-          TokenType::StringType,
-          TokenType::BooleanType,
-          TokenType::CharType,
-        ]) {
-          return_type = Some(DataType::from_token_type(self.previous().kind));
-        } else {
-          let token = &self.peek();
-
-          return Err(ParserDiagnosticError::ExpectedReturnTypeAfterFunction(
-            token.clone(),
+    if !self.check(TokenType::RightParen) {
+      loop {
+        if parameters.len() >= 255 {
+          return Err(ParserDiagnosticError::InvalidNumberOfArguments(
+            255,
+            parameters.len(),
+            name.clone(),
           ));
         }
 
-        self.consume(TokenType::LeftBrace)?;
+        let is_mut: bool = if self.peek().kind == TokenType::Mut {
+          self.advance();
+          true
+        } else {
+          false
+        };
 
-        let mut body: Vec<Statement> = Vec::new();
+        let param = self.consume(TokenType::Identifier)?;
 
-        body.push(self.block()?);
+        self.consume(TokenType::Colon)?;
+        let token = self.advance();
 
-        Ok(Statement::FunctionStatement(FunctionStatement::new(
-          name,
-          parameters,
-          body,
-          return_type,
-          is_public,
-        )))
+        parameters.push(FunctionParameter::new(
+          param,
+          DataType::from_token_type(token.kind),
+          is_mut,
+        ));
+
+        if !self.match_token(&[TokenType::Comma]) {
+          break;
+        }
       }
+    }
+
+    self.consume(TokenType::RightParen)?;
+
+    self.consume(TokenType::Colon)?;
+
+    let return_type: Option<DataType>;
+    if self.match_token(&[
+      TokenType::Void,
+      TokenType::IntType,
+      TokenType::DoubleType,
+      TokenType::StringType,
+      TokenType::BooleanType,
+      TokenType::CharType,
+    ]) {
+      return_type = Some(DataType::from_token_type(self.previous().kind));
+    } else {
+      let token = &self.peek();
+
+      return Err(ParserDiagnosticError::ExpectedReturnTypeAfterFunction(
+        token.clone(),
+      ));
+    }
+
+    let mut body: Vec<Statement> = Vec::new();
+
+    if !self.match_token(&[TokenType::SemiColon]) {
+      self.consume(TokenType::LeftBrace)?;
+
+      body.push(self.block()?);
+    }
+
+    Ok(Statement::FunctionStatement(FunctionStatement::new(
+      name,
+      parameters,
+      body,
+      return_type,
+      is_public,
+      if decorator.is_some() {
+        vec![decorator.unwrap()]
+      } else {
+        vec![]
+      },
+    )))
+  }
+
+  fn function(
+    &mut self,
+    kind: FunctionKind,
+    is_public: bool,
+    decorator: Option<FunctionDecorator>,
+  ) -> ParserResult<Statement> {
+    match kind {
+      FunctionKind::Function => self.function_statement(is_public, decorator),
       FunctionKind::Method => todo!(),
       FunctionKind::Initializer => todo!(),
       FunctionKind::Lambda => todo!(),
@@ -914,13 +937,46 @@ impl Parser {
    */
   fn export_statement(&mut self) -> Result<Statement, ParserDiagnosticError> {
     if self.match_token(&[TokenType::Function]) {
-      let function = self.function(FunctionKind::Function, true)?;
+      let function = self.function(FunctionKind::Function, true, None)?;
       return Ok(function);
     } else {
       return Err(ParserDiagnosticError::ExpectedToken(
         TokenType::Function,
         self.peek(),
       ));
+    }
+  }
+
+  fn decoration_statement(&mut self) -> Result<Statement, ParserDiagnosticError> {
+    match self.peek().kind {
+      TokenType::Function => {
+        let function = self.function(FunctionKind::Function, true, None)?;
+        return Ok(function);
+      }
+      TokenType::Extern => {
+        self.advance();
+        self.consume(TokenType::LeftParen)?;
+
+        let path = self.consume(TokenType::String)?;
+
+        self.consume(TokenType::RightParen)?;
+
+        let is_public = self.match_token(&[TokenType::Export]);
+
+        self.consume(TokenType::Function)?;
+
+        let func = self.function(
+          FunctionKind::Function,
+          is_public,
+          Some(FunctionDecorator::Extern(path)),
+        )?;
+
+        return Ok(func);
+      }
+      TokenType::Identifier => {
+        todo!()
+      }
+      _ => todo!(),
     }
   }
 }

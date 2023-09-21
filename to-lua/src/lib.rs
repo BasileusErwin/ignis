@@ -211,6 +211,10 @@ impl TranspilerToLua {
 
   fn transpile_function_to_lua(&mut self, func: &IRFunction, indent_level: usize) -> String {
     let mut code = String::new();
+    
+    if func.metadata.is_extern {
+      return code;
+    }
 
     if let Some(body) = &func.body {
       let parameters = func

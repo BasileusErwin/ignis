@@ -113,6 +113,9 @@ impl<'a> Lexer<'a> {
       ';' => {
         token = TokenType::SemiColon;
       }
+      '@' => {
+        token = TokenType::At;
+      }
       '-' => {
         token = if self.match_char('=') {
           TokenType::Decrement

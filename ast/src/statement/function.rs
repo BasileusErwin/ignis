@@ -5,6 +5,12 @@ use serde_json::json;
 use super::Statement;
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum FunctionDecorator {
+  Extern(Token),
+  Custom,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct FunctionParameter {
   pub name: Token,
   pub data_type: DataType,
@@ -44,6 +50,7 @@ pub struct FunctionStatement {
   pub body: Vec<Statement>,
   pub return_type: Option<DataType>,
   pub is_exported: bool,
+  pub annotations: Vec<FunctionDecorator>,
 }
 
 impl FunctionStatement {
@@ -53,6 +60,7 @@ impl FunctionStatement {
     body: Vec<Statement>,
     return_type: Option<DataType>,
     is_exported: bool,
+    annotations: Vec<FunctionDecorator>,
   ) -> Self {
     Self {
       name,
@@ -60,6 +68,7 @@ impl FunctionStatement {
       body,
       return_type,
       is_exported,
+      annotations
     }
   }
 }

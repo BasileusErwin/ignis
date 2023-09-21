@@ -1,4 +1,4 @@
-use std::fmt::{Display, Formatter};
+use std::fmt::{Display, Formatter, write};
 
 /**
   TokenType
@@ -21,6 +21,7 @@ pub enum TokenType {
   Ampersand,    // &
   Mod,          // %
   QuestionMark, // ?
+  At,    // @
 
   // One or two character tokens
   Equal,        // =
@@ -173,6 +174,7 @@ impl TokenType {
       TokenType::Identifier => "identifier".to_string(),
       TokenType::Eof => "eof".to_string(),
       TokenType::Extern => "extern".to_string(),
+      TokenType::At => "comment".to_string(),
       _ => String::new(),
     }
   }
@@ -257,6 +259,7 @@ impl Display for TokenType {
       TokenType::Void => write!(f, "void"),
       TokenType::Comment => write!(f, "comment"),
       TokenType::Extern => write!(f, "extern"),
+      TokenType::At => write!(f, "@"),
     }
   }
 }

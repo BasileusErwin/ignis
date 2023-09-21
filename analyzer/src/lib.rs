@@ -15,9 +15,17 @@ use ast::{
     array::Array,
   },
   statement::{
-    Statement, expression::ExpressionStatement, block::Block, variable::Variable,
-    if_statement::IfStatement, while_statement::WhileStatement, function::FunctionStatement,
-    return_statement::Return, class::Class, for_in::ForIn, import::Import,
+    Statement,
+    expression::ExpressionStatement,
+    block::Block,
+    variable::Variable,
+    if_statement::IfStatement,
+    while_statement::WhileStatement,
+    function::{FunctionStatement, FunctionDecorator},
+    return_statement::Return,
+    class::Class,
+    for_in::ForIn,
+    import::Import,
   },
 };
 use enums::{data_type::DataType, token_type::TokenType};
@@ -510,12 +518,22 @@ impl Visitor<AnalyzerResult> for Analyzer {
 
     let mut ir: IRBlock = IRBlock::new(Vec::new(), Vec::new());
 
+    let is_extern = statement
+      .annotations
+      .clone()
+      .into_iter()
+      .find(|a| match a {
+        FunctionDecorator::Extern(_) => true,
+        _ => false,
+      })
+      .is_some();
+
     let mut current_function = IRFunction::new(
       statement.name.span.literal.clone(),
       parameters.clone(),
       statement.return_type.clone().unwrap_or(DataType::Void),
       None,
-      IRFunctionMetadata::new(false, statement.is_exported, false),
+      IRFunctionMetadata::new(false, statement.is_exported, false, is_extern),
     );
 
     self.current_function = Some(current_function.clone());
@@ -753,7 +771,7 @@ impl Analyzer {
           )],
           DataType::Void,
           None,
-          IRFunctionMetadata::new(false, true, true),
+          IRFunctionMetadata::new(false, true, true, true),
         )));
 
         block_stack.insert("println".to_string(), true);
@@ -769,7 +787,7 @@ impl Analyzer {
           )],
           DataType::String,
           None,
-          IRFunctionMetadata::new(false, true, true),
+          IRFunctionMetadata::new(false, true, true, true),
         )));
 
         block_stack.insert("toString".to_string(), true);
