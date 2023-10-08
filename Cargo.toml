@@ -21,7 +21,6 @@ enums = { path = "./enums" }
 lexer = { path = "./lexer" }
 analyzer = { path = "./analyzer" }
 evaluator = { path = "./evaluator" }
-compiler = { path = "./compiler" }
 diagnostic = { path = "./diagnostic" }
 to-lua = { path = "./to-lua" }
 
@@ -36,7 +35,6 @@ members = [
 	"ast",
 	"analyzer",
 	"evaluator",
-	"compiler",
 	"enums",
 	"diagnostic",
 	"to-lua",

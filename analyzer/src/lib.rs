@@ -616,7 +616,6 @@ impl Visitor<AnalyzerResult> for Analyzer {
 
     let instruction = IRInstruction::Array(IRArray::new(
       elements,
-      expression.token.clone(),
       DataType::Array(Box::new(first_type.clone())),
     ));
 
@@ -714,15 +713,15 @@ impl Analyzer {
           let mut current_ir = self.irs.get_mut(&self.current_file).unwrap();
           current_ir.push(ir.clone());
 
-          if let IRInstruction::Function(f) = ir {
-            if f.name == "main" {
-              current_ir.push(IRInstruction::Call(IRCall::new(
-                "main".to_string(),
-                Vec::new(),
-                DataType::Void,
-              )))
-            }
-          }
+          // if let IRInstruction::Function(f) = ir {
+          //   if f.name == "main" {
+          //     current_ir.push(IRInstruction::Call(IRCall::new(
+          //       "main".to_string(),
+          //       Vec::new(),
+          //       DataType::Void,
+          //     )))
+          //   }
+          // }
         }
         Err(e) => self.diagnostics.push(e),
       }

@@ -119,12 +119,12 @@ fn run(
   //   display_block(&block.clone(), "Block", 1);
   // }
 
-  for result in &analyzer.irs {
-    println!("IR for {}", result.0);
-    for ir in result.1 {
-      display_ir(ir, 1);
-    }
-  }
+  // for result in &analyzer.irs {
+  //   println!("IR for {}", result.0);
+  //   for ir in result.1 {
+  //     display_ir(ir, 1);
+  //   }
+  // }
 
   let mut transpiler = TranspilerToLua::new();
   let mut code_results: Vec<CodeResult> = vec![];

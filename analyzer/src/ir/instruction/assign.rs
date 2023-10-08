@@ -1,5 +1,6 @@
 use super::IRInstruction;
 
+#[repr(C)]
 #[derive(Debug, Clone)]
 pub struct IRAssign {
   pub name: String,

@@ -25,6 +25,7 @@ use self::{
 };
 
 #[derive(Debug, Clone)]
+#[repr(C)]
 pub enum IRInstruction {
   Binary(IRBinary),
   Block(IRBlock),

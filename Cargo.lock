@@ -23,19 +23,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "compiler"
-version = "0.1.0"
-dependencies = [
- "analyzer",
-]
-
-[[package]]
 name = "diagnostic"
 version = "0.1.0"
 dependencies = [
  "analyzer",
  "ast",
- "compiler",
  "enums",
  "evaluator",
  "lexer",
@@ -61,7 +53,6 @@ version = "0.1.0"
 dependencies = [
  "analyzer",
  "ast",
- "compiler",
  "diagnostic",
  "enums",
  "evaluator",
@@ -78,7 +69,6 @@ version = "0.1.0"
 dependencies = [
  "analyzer",
  "ast",
- "compiler",
  "diagnostic",
  "enums",
  "evaluator",
