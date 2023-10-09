@@ -45,7 +45,7 @@ pub enum TokenType {
 
   // Literals
   Int,    // 1-10
-  Double, // 1.3
+  Float, // 1.3
   Char,   // a-z A-Z 0-9
   String,
 
@@ -53,7 +53,7 @@ pub enum TokenType {
   StringType,
   IntType,
   BooleanType,
-  DoubleType,
+  FloatType,
   CharType,
 
   // Keywords
@@ -131,13 +131,13 @@ impl TokenType {
       TokenType::Increment => "+=".to_string(),
       TokenType::Decrement => "-=".to_string(),
       TokenType::Int => "int".to_string(),
-      TokenType::Double => "double".to_string(),
+      TokenType::Float => "Float".to_string(),
       TokenType::Char => "char".to_string(),
       TokenType::String => "string".to_string(),
       TokenType::StringType => "string".to_string(),
       TokenType::IntType => "int".to_string(),
       TokenType::BooleanType => "bool".to_string(),
-      TokenType::DoubleType => "double".to_string(),
+      TokenType::FloatType => "float".to_string(),
       TokenType::CharType => "char".to_string(),
       TokenType::Class => "class".to_string(),
       TokenType::Super => "super".to_string(),
@@ -214,13 +214,13 @@ impl Display for TokenType {
       TokenType::Increment => write!(f, "+="),
       TokenType::Decrement => write!(f, "-="),
       TokenType::Int => write!(f, "int"),
-      TokenType::Double => write!(f, "double"),
+      TokenType::Float => write!(f, "Float"),
       TokenType::Char => write!(f, "char"),
       TokenType::String => write!(f, "string"),
       TokenType::StringType => write!(f, "string"),
       TokenType::IntType => write!(f, "int"),
       TokenType::BooleanType => write!(f, "bool"),
-      TokenType::DoubleType => write!(f, "double"),
+      TokenType::FloatType => write!(f, "float"),
       TokenType::CharType => write!(f, "char"),
       TokenType::Class => write!(f, "class"),
       TokenType::Super => write!(f, "super"),

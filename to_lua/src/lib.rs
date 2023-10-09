@@ -60,7 +60,7 @@ impl TranspilerToLua {
       IRInstruction::Literal(literal) => code.push_str(&match &literal.value {
         AnalyzerValue::Int(num) => num.to_string(),
         AnalyzerValue::String(s) => format!("\"{}\"", s),
-        AnalyzerValue::Double(num) => num.to_string(),
+        AnalyzerValue::Float(num) => num.to_string(),
         AnalyzerValue::Boolean(boolean) => boolean.to_string(),
         AnalyzerValue::Return(r) => r.to_string(),
         AnalyzerValue::Function(f) => f.name.span.literal.clone(),

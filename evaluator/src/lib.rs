@@ -31,7 +31,7 @@ use {
 };
 
 use self::{
-  callable::{Callable, function::Function, print::Println},
+  callable::{function::Function, print::Println},
   environment::{VariableEnvironment, Environment},
 };
 
@@ -61,27 +61,27 @@ impl Visitor<EvaluatorResult<EvaluatorValue>> for Evaluator {
       TokenType::EqualEqual => self.is_equal(&left, &right, false, expression.operator.clone())?,
       TokenType::Greater => match (&left, &right) {
         (EvaluatorValue::Int(l), EvaluatorValue::Int(r)) => EvaluatorValue::Boolean(l > r),
-        (EvaluatorValue::Double(l), EvaluatorValue::Double(r)) => EvaluatorValue::Boolean(l > r),
+        (EvaluatorValue::Float(l), EvaluatorValue::Float(r)) => EvaluatorValue::Boolean(l > r),
         _ => EvaluatorValue::None,
       },
       TokenType::GreaterEqual => match (&left, &right) {
         (EvaluatorValue::Int(l), EvaluatorValue::Int(r)) => EvaluatorValue::Boolean(l >= r),
-        (EvaluatorValue::Double(l), EvaluatorValue::Double(r)) => EvaluatorValue::Boolean(l >= r),
+        (EvaluatorValue::Float(l), EvaluatorValue::Float(r)) => EvaluatorValue::Boolean(l >= r),
         _ => EvaluatorValue::None,
       },
       TokenType::Less => match (&left, &right) {
         (EvaluatorValue::Int(l), EvaluatorValue::Int(r)) => EvaluatorValue::Boolean(l < r),
-        (EvaluatorValue::Double(l), EvaluatorValue::Double(r)) => EvaluatorValue::Boolean(l < r),
+        (EvaluatorValue::Float(l), EvaluatorValue::Float(r)) => EvaluatorValue::Boolean(l < r),
         _ => EvaluatorValue::None,
       },
       TokenType::LessEqual => match (&left, &right) {
         (EvaluatorValue::Int(l), EvaluatorValue::Int(r)) => EvaluatorValue::Boolean(l <= r),
-        (EvaluatorValue::Double(l), EvaluatorValue::Double(r)) => EvaluatorValue::Boolean(l <= r),
+        (EvaluatorValue::Float(l), EvaluatorValue::Float(r)) => EvaluatorValue::Boolean(l <= r),
         _ => EvaluatorValue::None,
       },
       TokenType::Plus => match (&left, &right) {
         (EvaluatorValue::Int(l), EvaluatorValue::Int(r)) => EvaluatorValue::Int(l + r),
-        (EvaluatorValue::Double(l), EvaluatorValue::Double(r)) => EvaluatorValue::Double(l + r),
+        (EvaluatorValue::Float(l), EvaluatorValue::Float(r)) => EvaluatorValue::Float(l + r),
         (EvaluatorValue::String(l), EvaluatorValue::String(r)) => {
           EvaluatorValue::String(format!("{}{}", l, r))
         }
@@ -89,17 +89,17 @@ impl Visitor<EvaluatorResult<EvaluatorValue>> for Evaluator {
       },
       TokenType::Minus => match (&left, &right) {
         (EvaluatorValue::Int(l), EvaluatorValue::Int(r)) => EvaluatorValue::Int(l - r),
-        (EvaluatorValue::Double(l), EvaluatorValue::Double(r)) => EvaluatorValue::Double(l - r),
+        (EvaluatorValue::Float(l), EvaluatorValue::Float(r)) => EvaluatorValue::Float(l - r),
         _ => EvaluatorValue::None,
       },
       TokenType::Asterisk => match (&left, &right) {
         (EvaluatorValue::Int(l), EvaluatorValue::Int(r)) => EvaluatorValue::Int(l * r),
-        (EvaluatorValue::Double(l), EvaluatorValue::Double(r)) => EvaluatorValue::Double(l * r),
+        (EvaluatorValue::Float(l), EvaluatorValue::Float(r)) => EvaluatorValue::Float(l * r),
         _ => EvaluatorValue::None,
       },
       TokenType::Slash => match (&left, &right) {
         (EvaluatorValue::Int(l), EvaluatorValue::Int(r)) => EvaluatorValue::Int(l / r),
-        (EvaluatorValue::Double(l), EvaluatorValue::Double(r)) => EvaluatorValue::Double(l / r),
+        (EvaluatorValue::Float(l), EvaluatorValue::Float(r)) => EvaluatorValue::Float(l / r),
         _ => EvaluatorValue::None,
       },
       _ => {
@@ -133,7 +133,7 @@ impl Visitor<EvaluatorResult<EvaluatorValue>> for Evaluator {
   fn visit_literal_expression(&mut self, expression: &Literal) -> EvaluatorResult<EvaluatorValue> {
     match expression.value.clone() {
       LiteralValue::Boolean(value) => Ok(EvaluatorValue::Boolean(value)),
-      LiteralValue::Double(value) => Ok(EvaluatorValue::Double(value)),
+      LiteralValue::Float(value) => Ok(EvaluatorValue::Float(value)),
       LiteralValue::Int(value) => Ok(EvaluatorValue::Int(value)),
       LiteralValue::String(value) => Ok(EvaluatorValue::String(value)),
       LiteralValue::Char(_) | LiteralValue::Null => Ok(EvaluatorValue::None),
@@ -146,7 +146,7 @@ impl Visitor<EvaluatorResult<EvaluatorValue>> for Evaluator {
     match expression.operator.kind {
       TokenType::Bang => return Ok(EvaluatorValue::Boolean(!self.is_truthy(&right))),
       TokenType::Minus => match right {
-        EvaluatorValue::Double(r) => return Ok(EvaluatorValue::Double(-r)),
+        EvaluatorValue::Float(r) => return Ok(EvaluatorValue::Float(-r)),
         EvaluatorValue::Int(r) => return Ok(EvaluatorValue::Int(-r)),
         _ => {
           return Err(ExecutionError::DiagnosticError(
@@ -441,7 +441,7 @@ impl Evaluator {
   ) -> EvaluatorResult<EvaluatorValue> {
     let mut value = match (left, right) {
       (EvaluatorValue::Boolean(l), EvaluatorValue::Boolean(r)) => l == r,
-      (EvaluatorValue::Double(l), EvaluatorValue::Double(r)) => l == r,
+      (EvaluatorValue::Float(l), EvaluatorValue::Float(r)) => l == r,
       (EvaluatorValue::Int(l), EvaluatorValue::Int(r)) => l == r,
       (EvaluatorValue::String(l), EvaluatorValue::String(r)) => l == r,
       (EvaluatorValue::None, EvaluatorValue::None) => true,
@@ -463,7 +463,7 @@ impl Evaluator {
     match value {
       EvaluatorValue::Boolean(v) => v.clone(),
       EvaluatorValue::String(v) => !v.is_empty(),
-      EvaluatorValue::Int(_) | EvaluatorValue::Double(_) => true,
+      EvaluatorValue::Int(_) | EvaluatorValue::Float(_) => true,
       EvaluatorValue::None | EvaluatorValue::Null => false,
       EvaluatorValue::Callable(_) => false,
       EvaluatorValue::Return(_) => false,

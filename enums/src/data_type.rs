@@ -4,7 +4,7 @@ use super::token_type::TokenType;
 pub enum DataType {
   String,
   Int,
-  Double,
+  Float,
   Boolean,
   Char,
   Null,
@@ -30,7 +30,7 @@ impl DataType {
   pub fn from_token_type(kind: TokenType) -> Self {
     match kind {
       TokenType::StringType => DataType::String,
-      TokenType::DoubleType => DataType::Double,
+      TokenType::FloatType => DataType::Float,
       TokenType::CharType => DataType::Char,
       TokenType::BooleanType => DataType::Boolean,
       TokenType::IntType => DataType::Int,
@@ -44,7 +44,7 @@ impl DataType {
     match self {
       DataType::String => "String".to_string(),
       DataType::Int => "Int".to_string(),
-      DataType::Double => "Double".to_string(),
+      DataType::Float => "Float".to_string(),
       DataType::Boolean => "Boolean".to_string(),
       DataType::Char => "Char".to_string(),
       DataType::None => "Null".to_string(),

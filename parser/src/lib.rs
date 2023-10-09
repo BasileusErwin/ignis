@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use ast::{
   statement::{
     class::Class,
@@ -223,7 +221,7 @@ impl Parser {
       | TokenType::False
       | TokenType::Null
       | TokenType::Int
-      | TokenType::Double
+      | TokenType::Float
       | TokenType::String => {
         self.advance();
         Ok(Expression::Literal(Literal::new(
@@ -312,11 +310,11 @@ impl Parser {
       | (None, DataType::Int, TokenType::Minus)
       | (Some(DataType::Int), DataType::Int, TokenType::Asterisk)
       | (Some(DataType::Int), DataType::Int, TokenType::Slash) => DataType::Int,
-      (Some(DataType::Double), DataType::Double, TokenType::Plus)
-      | (Some(DataType::Double), DataType::Double, TokenType::Minus)
-      | (Some(DataType::Double), DataType::Double, TokenType::Slash)
-      | (Some(DataType::Double), DataType::Double, TokenType::Asterisk)
-      | (None, DataType::Double, TokenType::Minus) => DataType::Double,
+      (Some(DataType::Float), DataType::Float, TokenType::Plus)
+      | (Some(DataType::Float), DataType::Float, TokenType::Minus)
+      | (Some(DataType::Float), DataType::Float, TokenType::Slash)
+      | (Some(DataType::Float), DataType::Float, TokenType::Asterisk)
+      | (None, DataType::Float, TokenType::Minus) => DataType::Float,
       (Some(DataType::String), DataType::String, TokenType::Plus) => DataType::String,
       (None, DataType::Boolean, TokenType::Bang) | (None, DataType::String, TokenType::Bang) => {
         DataType::Boolean
@@ -332,7 +330,7 @@ impl Parser {
       Expression::Literal(literal) => match literal.value {
         LiteralValue::Boolean(_) => DataType::Boolean,
         LiteralValue::Char(_) => DataType::Char,
-        LiteralValue::Double(_) => DataType::Double,
+        LiteralValue::Float(_) => DataType::Float,
         LiteralValue::Int(_) => DataType::Int,
         LiteralValue::String(_) => DataType::String,
         _ => DataType::Int,
@@ -485,7 +483,7 @@ impl Parser {
     if self.match_token(&[
       TokenType::Void,
       TokenType::IntType,
-      TokenType::DoubleType,
+      TokenType::FloatType,
       TokenType::StringType,
       TokenType::BooleanType,
       TokenType::CharType,

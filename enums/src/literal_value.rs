@@ -3,7 +3,7 @@ use crate::token_type::TokenType;
 #[derive(Debug, Clone, PartialEq)]
 pub enum LiteralValue {
   Int(i64),
-  Double(f64),
+  Float(f64),
   Char(char),
   String(String),
   Boolean(bool),
@@ -15,7 +15,7 @@ impl LiteralValue {
     match self {
       LiteralValue::Boolean(x) => x.to_string(),
       LiteralValue::Null => "null".to_string(),
-      LiteralValue::Double(x) => x.to_string(),
+      LiteralValue::Float(x) => x.to_string(),
       LiteralValue::Int(x) => x.to_string(),
       LiteralValue::String(x) => x.clone(),
       LiteralValue::Char(x) => x.to_string(),
@@ -24,7 +24,7 @@ impl LiteralValue {
   pub fn from_token_type(kind: TokenType, value: String) -> Self {
     match kind {
       TokenType::Int => Self::Int(value.parse().unwrap()),
-      TokenType::Double => Self::Double(value.parse().unwrap()),
+      TokenType::Float => Self::Float(value.parse().unwrap()),
       TokenType::String => Self::String(value),
       TokenType::False | TokenType::True => Self::Boolean(value.parse().unwrap()),
       _ => Self::Null,

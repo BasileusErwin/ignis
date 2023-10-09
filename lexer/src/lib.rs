@@ -213,7 +213,7 @@ impl<'a> Lexer<'a> {
       _ => {
         if c.is_ascii_digit() {
           if self.number() {
-            token = TokenType::Double;
+            token = TokenType::Float;
           } else {
             token = TokenType::Int;
           }
@@ -263,7 +263,7 @@ impl<'a> Lexer<'a> {
       "string" => Some(TokenType::StringType),
       "boolean" => Some(TokenType::BooleanType),
       "int" => Some(TokenType::IntType),
-      "double" => Some(TokenType::DoubleType),
+      "float" => Some(TokenType::FloatType),
       "char" => Some(TokenType::CharType),
       "void" => Some(TokenType::Void),
       "extern" => Some(TokenType::Extern),
@@ -343,7 +343,7 @@ impl<'a> Lexer<'a> {
   }
 
   fn number(&mut self) -> bool {
-    let mut is_double: bool = false;
+    let mut is_float: bool = false;
     while self.peek().is_ascii_digit() || self.peek() == '_' {
       if self.peek() == '_' {
         if !self.peek_next().is_ascii_digit() || !self.peek_prev().is_ascii_digit() {
@@ -367,10 +367,10 @@ impl<'a> Lexer<'a> {
         self.advance();
       }
 
-      is_double = true;
+      is_float = true;
     }
 
-    is_double
+    is_float
   }
 
   fn peek_next(&self) -> char {
@@ -414,7 +414,7 @@ impl<'a> Lexer<'a> {
       return;
     }
 
-    if kind == TokenType::Int || kind == TokenType::Double {
+    if kind == TokenType::Int || kind == TokenType::Float {
       if literal.contains("_") {
         literal = literal.replace("_", "");
       }

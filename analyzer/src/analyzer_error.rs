@@ -1,4 +1,4 @@
-use ast::{expression::variable::VariableExpression, statement::import::ImportSymbol};
+use ast::expression::variable::VariableExpression;
 use enums::data_type::DataType;
 use lexer::{token::Token, text_span::TextSpan};
 

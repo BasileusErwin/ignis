@@ -32,7 +32,7 @@ impl Callable for Println {
       match argument {
         EvaluatorValue::String(s) => value = s,
         EvaluatorValue::Int(i) => value = i.to_string(),
-        EvaluatorValue::Double(d) => value = d.to_string(),
+        EvaluatorValue::Float(d) => value = d.to_string(),
         EvaluatorValue::Boolean(b) => value = b.to_string(),
         EvaluatorValue::Return(r) => value = r.to_string(),
         EvaluatorValue::Null => value = "null".to_string(),

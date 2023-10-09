@@ -124,11 +124,11 @@ impl Environment {
           )
           | (
             VariableEnvironment {
-              values: EvaluatorValue::Double { .. },
+              values: EvaluatorValue::Float { .. },
               ..
             },
             VariableEnvironment {
-              values: EvaluatorValue::Double { .. },
+              values: EvaluatorValue::Float { .. },
               ..
             },
           ) => (),

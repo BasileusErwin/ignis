@@ -5,7 +5,7 @@ use std::{
   fs,
 };
 
-use analyzer::{Analyzer, debug::display_ir};
+use analyzer::Analyzer;
 use parser::Parser;
 use lexer::Lexer;
 use ast::Ast;
@@ -125,6 +125,13 @@ fn run(
   //     display_ir(ir, 1);
   //   }
   // }
+
+  let mut generator = bytecode_generator::BytecodeGenerator::new();
+  
+  generator.generate(analyzer.irs.clone());
+  
+  let debug = bytecode_generator::debug::BytecodeDebug::new(generator.bytecodes);
+  debug.print_bytecode();
 
   let mut transpiler = TranspilerToLua::new();
   let mut code_results: Vec<CodeResult> = vec![];

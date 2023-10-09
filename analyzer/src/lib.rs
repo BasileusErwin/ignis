@@ -712,16 +712,6 @@ impl Analyzer {
         Ok(ir) => {
           let mut current_ir = self.irs.get_mut(&self.current_file).unwrap();
           current_ir.push(ir.clone());
-
-          // if let IRInstruction::Function(f) = ir {
-          //   if f.name == "main" {
-          //     current_ir.push(IRInstruction::Call(IRCall::new(
-          //       "main".to_string(),
-          //       Vec::new(),
-          //       DataType::Void,
-          //     )))
-          //   }
-          // }
         }
         Err(e) => self.diagnostics.push(e),
       }
@@ -757,10 +747,10 @@ impl Analyzer {
   }
 
   fn resolve_std_import(&mut self, lib: String, block_stack: &mut HashMap<String, bool>) {
-    let mut currnet_ir = self.irs.get_mut(&self.current_file).unwrap();
+    let mut current_ir = self.irs.get_mut(&self.current_file).unwrap();
     match lib.clone().as_str() {
       "std:io" => {
-        currnet_ir.push(IRInstruction::Function(IRFunction::new(
+        current_ir.push(IRInstruction::Function(IRFunction::new(
           "println".to_string(),
           vec![IRVariable::new(
             "message".to_string(),
@@ -776,7 +766,7 @@ impl Analyzer {
         block_stack.insert("println".to_string(), true);
       }
       "std:string" => {
-        currnet_ir.push(IRInstruction::Function(IRFunction::new(
+        current_ir.push(IRInstruction::Function(IRFunction::new(
           "toString".to_string(),
           vec![IRVariable::new(
             "value".to_string(),
@@ -977,7 +967,7 @@ impl Analyzer {
           value: AnalyzerValue::Int(_),
         })
         | IRInstruction::Literal(IRLiteral {
-          value: AnalyzerValue::Double(_),
+          value: AnalyzerValue::Float(_),
         }) => true,
         _ => false,
       },
@@ -992,7 +982,7 @@ impl Analyzer {
           value: AnalyzerValue::String(_),
         })
         | IRInstruction::Literal(IRLiteral {
-          value: AnalyzerValue::Double(_),
+          value: AnalyzerValue::Float(_),
         })
         | IRInstruction::Literal(IRLiteral {
           value: AnalyzerValue::Null,
@@ -1026,7 +1016,7 @@ impl Analyzer {
   ) -> CheckCompatibility<DataType> {
     match (left, right) {
       (DataType::Int, DataType::Int) => (true, DataType::Int),
-      (DataType::Double, DataType::Double) => (true, DataType::Double),
+      (DataType::Float, DataType::Float) => (true, DataType::Float),
       (DataType::String, DataType::String) => (true, DataType::String),
       (_, DataType::Null) => (true, left.clone()),
       (DataType::Null, _) => (true, right.clone()),
@@ -1041,9 +1031,9 @@ impl Analyzer {
   ) -> CheckCompatibility<DataType> {
     match (left, right) {
       (DataType::Int, DataType::Int) => (true, DataType::Int),
-      (DataType::Double, DataType::Double) => (true, DataType::Double),
-      (DataType::Int, DataType::Double) => (true, DataType::Double),
-      (DataType::Double, DataType::Int) => (true, DataType::Double),
+      (DataType::Float, DataType::Float) => (true, DataType::Float),
+      (DataType::Int, DataType::Float) => (true, DataType::Float),
+      (DataType::Float, DataType::Int) => (true, DataType::Float),
       (_, DataType::Null) => (true, left.clone()),
       (DataType::Null, _) => (true, right.clone()),
       _ => (false, DataType::None),
@@ -1057,9 +1047,9 @@ impl Analyzer {
   ) -> CheckCompatibility<DataType> {
     match (left, right) {
       (DataType::Int, DataType::Int) => (true, DataType::Boolean),
-      (DataType::Double, DataType::Double) => (true, DataType::Boolean),
-      (DataType::Int, DataType::Double) => (true, DataType::Boolean),
-      (DataType::Double, DataType::Int) => (true, DataType::Boolean),
+      (DataType::Float, DataType::Float) => (true, DataType::Boolean),
+      (DataType::Int, DataType::Float) => (true, DataType::Boolean),
+      (DataType::Float, DataType::Int) => (true, DataType::Boolean),
       (_, DataType::Null) => (true, left.clone()),
       (DataType::Null, _) => (true, right.clone()),
       _ => (false, DataType::None),
@@ -1073,7 +1063,7 @@ impl Analyzer {
   ) -> CheckCompatibility<DataType> {
     match (left, right) {
       (DataType::Int, DataType::Int) => (true, DataType::Boolean),
-      (DataType::Double, DataType::Double) => (true, DataType::Boolean),
+      (DataType::Float, DataType::Float) => (true, DataType::Boolean),
       (DataType::String, DataType::String) => (true, DataType::Boolean),
       (DataType::Boolean, DataType::Boolean) => (true, DataType::Boolean),
       (_, DataType::Null) => (true, left.clone()),

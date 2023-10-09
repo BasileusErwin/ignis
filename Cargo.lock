@@ -23,6 +23,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "bytecode_generator"
+version = "0.1.0"
+dependencies = [
+ "analyzer",
+]
+
+[[package]]
 name = "diagnostic"
 version = "0.1.0"
 dependencies = [
@@ -53,6 +60,7 @@ version = "0.1.0"
 dependencies = [
  "analyzer",
  "ast",
+ "bytecode_generator",
  "diagnostic",
  "enums",
  "evaluator",
@@ -60,7 +68,7 @@ dependencies = [
  "parser",
  "serde",
  "serde_json",
- "to-lua",
+ "to_lua",
 ]
 
 [[package]]
@@ -69,6 +77,7 @@ version = "0.1.0"
 dependencies = [
  "analyzer",
  "ast",
+ "bytecode_generator",
  "diagnostic",
  "enums",
  "evaluator",
@@ -76,7 +85,7 @@ dependencies = [
  "parser",
  "serde",
  "serde_json",
- "to-lua",
+ "to_lua",
 ]
 
 [[package]]
@@ -168,7 +177,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "to-lua"
+name = "to_lua"
 version = "0.1.0"
 dependencies = [
  "analyzer",

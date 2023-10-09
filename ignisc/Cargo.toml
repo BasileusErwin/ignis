@@ -16,7 +16,8 @@ lexer = { path = "../lexer" }
 analyzer = { path = "../analyzer" }
 evaluator = { path = "../evaluator" }
 diagnostic = { path = "../diagnostic" }
-to-lua = { path = "../to-lua" }
+to_lua = { path = "../to_lua" }
+bytecode_generator = { path = "../bytecode_generator" }
 
 serde = { version = "1.0.188", features = ["derive"] }
 serde_json = "1.0.105"
