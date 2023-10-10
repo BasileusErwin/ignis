@@ -36,7 +36,6 @@ dependencies = [
  "analyzer",
  "ast",
  "enums",
- "evaluator",
  "lexer",
  "parser",
 ]
@@ -44,15 +43,6 @@ dependencies = [
 [[package]]
 name = "enums"
 version = "0.1.0"
-
-[[package]]
-name = "evaluator"
-version = "0.1.0"
-dependencies = [
- "ast",
- "enums",
- "lexer",
-]
 
 [[package]]
 name = "ignis-lan"
@@ -63,7 +53,6 @@ dependencies = [
  "bytecode_generator",
  "diagnostic",
  "enums",
- "evaluator",
  "lexer",
  "parser",
  "serde",
@@ -80,7 +69,6 @@ dependencies = [
  "bytecode_generator",
  "diagnostic",
  "enums",
- "evaluator",
  "lexer",
  "parser",
  "serde",

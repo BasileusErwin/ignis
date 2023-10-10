@@ -16,4 +16,3 @@ parser = { path = "../parser" }
 enums = { path = "../enums" }
 lexer = { path = "../lexer" }
 analyzer = { path = "../analyzer" }
-evaluator = { path = "../evaluator" }

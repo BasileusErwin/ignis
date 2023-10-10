@@ -20,7 +20,6 @@ parser = { path = "./parser" }
 enums = { path = "./enums" }
 lexer = { path = "./lexer" }
 analyzer = { path = "./analyzer" }
-evaluator = { path = "./evaluator" }
 diagnostic = { path = "./diagnostic" }
 to_lua = { path = "./to_lua" }
 bytecode_generator = { path = "./bytecode_generator" }
@@ -35,7 +34,6 @@ members = [
 	"parser",
 	"ast",
 	"analyzer",
-	"evaluator",
 	"enums",
 	"diagnostic",
 	"to_lua",

@@ -11,7 +11,6 @@ use lexer::Lexer;
 use ast::Ast;
 use to_lua::TranspilerToLua;
 use diagnostic::{DiagnosticList, error::DiagnosticError};
-use evaluator::Evaluator;
 
 struct CodeResult {
   pub code: String,
@@ -36,10 +35,8 @@ fn display_diagnostic(diagnostics: &DiagnosticList, relp: bool) {
 }
 
 fn run_file(path: &str) -> Result<(), ()> {
-  let mut evaluator = Evaluator::new();
-
   match fs::read_to_string(path) {
-    Ok(content) => match run(content, path.to_string(), &mut evaluator, false) {
+    Ok(content) => match run(content, path.to_string(), false) {
       Ok(result) => {
         for code_result in result {
           let mut path = code_result.file_name.split("/").collect::<Vec<&str>>();
@@ -75,7 +72,6 @@ fn run_file(path: &str) -> Result<(), ()> {
 fn run(
   source: String,
   module_path: String,
-  _evaluator: &mut Evaluator,
   relp: bool,
 ) -> Result<Vec<CodeResult>, ()> {
   let mut lexer: Lexer<'_> = Lexer::new(&source, module_path.clone());
@@ -158,8 +154,6 @@ fn run(
 }
 
 fn run_prompt() -> Result<(), String> {
-  let mut evaluator = Evaluator::new();
-
   loop {
     print!("(ignis) > ");
 
@@ -198,7 +192,7 @@ fn run_prompt() -> Result<(), String> {
       continue;
     }
 
-    match run(buffer, "".to_string(), &mut evaluator, false) {
+    match run(buffer, "".to_string(), false) {
       Ok(_) => (),
       Err(()) => (),
     }
