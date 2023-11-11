@@ -26,6 +26,8 @@ use ast::{
     class::Class,
     for_in::ForIn,
     import::Import,
+    break_statement::BreakStatement,
+    continue_statement::Continue,
   },
 };
 use enums::{data_type::DataType, token_type::TokenType};
@@ -48,6 +50,7 @@ use ir::{
     ir_for_in::IRForIn,
     ir_array::IRArray,
     import::IRImport,
+    ir_break::IRBreak, ir_continue::IRContinue,
   },
   instruction_type::IRInstructionType,
 };
@@ -57,6 +60,15 @@ use parser::Parser;
 pub type AnalyzerResult = Result<IRInstruction, AnalyzerDiagnosticError>;
 type CheckCompatibility<T> = (bool, T);
 
+enum AnalyzerContext {
+  Function,
+  Method,
+  Class,
+  Loop,
+  Switch,
+  Match,
+}
+
 pub struct Analyzer {
   pub irs: HashMap<String, Vec<IRInstruction>>,
   pub block_stack: Vec<HashMap<String, bool>>,
@@ -64,6 +76,7 @@ pub struct Analyzer {
   pub scopes_variables: Vec<IRVariable>,
   pub current_function: Option<IRFunction>,
   pub current_file: String,
+  context: Vec<AnalyzerContext>,
 }
 
 impl Visitor<AnalyzerResult> for Analyzer {
@@ -473,16 +486,20 @@ impl Visitor<AnalyzerResult> for Analyzer {
   }
 
   fn visit_while_statement(&mut self, statement: &WhileStatement) -> AnalyzerResult {
+    self.context.push(AnalyzerContext::Loop);
     let condition = self.analyzer(&statement.condition)?;
     let body = self.analyze_statement(&statement.body)?;
 
     let instruction = IRInstruction::While(IRWhile::new(Box::new(condition), Box::new(body)));
+
+    self.context.pop();
 
     Ok(instruction)
   }
 
   fn visit_function_statement(&mut self, statement: &FunctionStatement) -> AnalyzerResult {
     self.begin_scope();
+    self.context.push(AnalyzerContext::Function);
     let mut parameters = Vec::<IRVariable>::new();
 
     if self.is_allready_declared(&statement.name.span.literal) {
@@ -560,13 +577,22 @@ impl Visitor<AnalyzerResult> for Analyzer {
 
     let instruction = IRInstruction::Function(current_function);
 
+    self.context.pop();
     self.current_function = None;
 
     Ok(instruction)
   }
 
   fn visit_return_statement(&mut self, statement: &Return) -> AnalyzerResult {
-    if self.current_function.is_none() {
+    if self
+      .context
+      .iter()
+      .find(|context| match context {
+        AnalyzerContext::Function | AnalyzerContext::Method => true,
+        _ => false,
+      })
+      .is_none()
+    {
       return Err(AnalyzerDiagnosticError::ReturnOutsideFunction(
         *statement.keyword.clone(),
       ));
@@ -687,6 +713,38 @@ impl Visitor<AnalyzerResult> for Analyzer {
       statement.module_path.span.literal.clone(),
     )))
   }
+
+  fn visit_break_statement(&mut self, statement: &BreakStatement) -> AnalyzerResult {
+    let is_loop = self.context.iter().find(|context| match context {
+      AnalyzerContext::Loop | AnalyzerContext::Switch => true,
+      _ => false,
+    });
+
+    if is_loop.is_none() {
+      return Err(AnalyzerDiagnosticError::BreakOutsideLoop(
+        statement.token.clone(),
+      ));
+    }
+
+    Ok(IRInstruction::Break(IRBreak::new(statement.token.clone())))
+  }
+
+  fn visit_continue_statement(&mut self, statement: &Continue) -> AnalyzerResult {
+    let is_loop = self.context.iter().find(|context| match context {
+      AnalyzerContext::Loop => true,
+      _ => false,
+    });
+
+    if is_loop.is_none() {
+      return Err(AnalyzerDiagnosticError::ContinueOutsideLoop(
+        statement.token.clone(),
+      ));
+    }
+
+    Ok(IRInstruction::Continue(IRContinue::new(
+      statement.token.clone(),
+    )))
+  }
 }
 
 impl Analyzer {
@@ -703,6 +761,7 @@ impl Analyzer {
       scopes_variables: Vec::new(),
       current_function: None,
       current_file,
+      context: Vec::new(),
     }
   }
 

@@ -5,11 +5,12 @@ use ast::{
     for_in::ForIn,
     import::{Import, ImportSource, ImportSymbol},
     function::FunctionDecorator,
+    break_statement::BreakStatement, continue_statement::Continue,
   },
   expression::array::Array,
 };
 use enums::{data_type::DataType, token_type::TokenType};
-use lexer::text_span::TextSpan;
+use lexer::{text_span::TextSpan, token};
 
 use {
   lexer::token::Token,
@@ -405,6 +406,14 @@ impl Parser {
       return self.decoration_statement();
     }
 
+    if self.match_token(&[TokenType::Break]) {
+      return self.break_statement();
+    }
+    
+    if self.match_token(&[TokenType::Continue]) {
+      return self.continue_statement();
+    }
+
     match self.statement() {
       Ok(statement) => Ok(statement),
       Err(error) => {
@@ -412,6 +421,22 @@ impl Parser {
         return Err(error);
       }
     }
+  }
+  
+  fn continue_statement(&mut self) -> Result<Statement, ParserDiagnosticError> {
+    let token = self.previous();
+
+    self.consume(TokenType::SemiColon)?;
+
+    Ok(Statement::Continue(Continue::new(token)))
+  }
+
+  fn break_statement(&mut self) -> Result<Statement, ParserDiagnosticError> {
+    let token = self.previous();
+
+    self.consume(TokenType::SemiColon)?;
+
+    Ok(Statement::Break(BreakStatement::new(token)))
   }
 
   fn return_statement(&mut self) -> Result<Statement, ParserDiagnosticError> {
@@ -736,7 +761,7 @@ impl Parser {
     self.consume(TokenType::RightParen)?;
 
     let body: Statement = self.statement()?;
-
+    
     Ok(Statement::WhileStatement(WhileStatement::new(
       Box::new(condition),
       Box::new(body),
@@ -744,6 +769,7 @@ impl Parser {
   }
 
   fn for_statement(&mut self) -> Result<Statement, ParserDiagnosticError> {
+
     self.consume(TokenType::LeftParen)?;
 
     self.consume(TokenType::Let)?;

@@ -21,7 +21,13 @@ pub enum TokenType {
   Ampersand,    // &
   Mod,          // %
   QuestionMark, // ?
-  At,    // @
+  At,           // @
+
+  // Template string tokens
+  TemplateStringStart, // `
+  TemplateStringEnd,   // `
+  ExpressionStart,     // ${
+  ExpressionEnd,       // }
 
   // One or two character tokens
   Equal,        // =
@@ -44,9 +50,9 @@ pub enum TokenType {
   Dot,       // .
 
   // Literals
-  Int,    // 1-10
+  Int,   // 1-10
   Float, // 1.3
-  Char,   // a-z A-Z 0-9
+  Char,  // a-z A-Z 0-9
   String,
 
   // Types
@@ -89,6 +95,7 @@ pub enum TokenType {
   Interface,
   Void,
   Extern,
+  Continue,
 
   Bad,
   Identifier,
@@ -175,6 +182,7 @@ impl TokenType {
       TokenType::Eof => "eof".to_string(),
       TokenType::Extern => "extern".to_string(),
       TokenType::At => "comment".to_string(),
+      TokenType::Continue => "continue".to_string(),
       _ => String::new(),
     }
   }
@@ -260,6 +268,11 @@ impl Display for TokenType {
       TokenType::Comment => write!(f, "comment"),
       TokenType::Extern => write!(f, "extern"),
       TokenType::At => write!(f, "@"),
+      TokenType::TemplateStringStart => write!(f, "`"),
+      TokenType::TemplateStringEnd => write!(f, "`"),
+      TokenType::ExpressionStart => write!(f, "${{"),
+      TokenType::ExpressionEnd => write!(f, "}}"),
+      TokenType::Continue => write!(f, "continue"),
     }
   }
 }

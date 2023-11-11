@@ -167,6 +167,12 @@ pub fn display_ir(instruction: &IRInstruction, indent_level: usize) {
         import.path
       );
     }
+    IRInstruction::Break(_) => {
+      println!("{}Break", indent);
+    }
+    IRInstruction::Continue(_) => {
+      println!("{}Continue", indent);
+    }
   };
 }
 

@@ -8,10 +8,18 @@ use analyzer::{
   analyzer_value::AnalyzerValue,
 };
 
+#[derive(Debug, Clone, PartialEq)]
+enum TranspilerContext {
+  For,
+  While,
+  Continue(Box<TranspilerContext>),
+}
+
 pub struct TranspilerToLua {
   pub code: String,
   pub statement_exported: Vec<(String, String)>,
   pub statement_imported: HashMap<String, String>,
+  context: Vec<TranspilerContext>,
 }
 
 impl TranspilerToLua {
@@ -20,6 +28,7 @@ impl TranspilerToLua {
       code: String::new(),
       statement_exported: vec![],
       statement_imported: HashMap::new(),
+      context: Vec::new(),
     }
   }
 
@@ -117,6 +126,8 @@ impl TranspilerToLua {
       IRInstruction::While(ir_while) => {
         let condition = self.transpile_ir_to_lua(&ir_while.condition, indent_level);
 
+        self.context.push(TranspilerContext::While);
+
         code.push_str(&format!(
           "{}while {} do\n",
           " ".repeat(indent_level),
@@ -125,7 +136,19 @@ impl TranspilerToLua {
 
         code.push_str(&self.transpile_ir_to_lua(&ir_while.body, indent_level + 2));
 
+        match self.context.last().unwrap() {
+          TranspilerContext::Continue(l) => {
+            if **l == TranspilerContext::While {
+              code.push_str(&format!("{}::continue::\n", " ".repeat(indent_level)));
+              self.context.pop();
+            }
+          }
+          _ => (),
+        };
+
         code.push_str(format!("{}end\n", " ".repeat(indent_level)).as_str());
+
+        self.context.pop();
       }
       IRInstruction::Call(call) => code.push_str(&self.transpile_call_to_lua(call, indent_level)),
       IRInstruction::Return(r) => {
@@ -154,6 +177,8 @@ impl TranspilerToLua {
         ));
       }
       IRInstruction::ForIn(for_in) => {
+        self.context.push(TranspilerContext::For);
+
         code.push_str(&format!(
           "{}for _, {} in pairs({}) do\n",
           " ".repeat(indent_level),
@@ -161,7 +186,18 @@ impl TranspilerToLua {
           self.transpile_ir_to_lua(&for_in.iterable, indent_level)
         ));
 
+
         code.push_str(&self.transpile_ir_to_lua(&for_in.body, indent_level + 2));
+
+        match self.context.last().unwrap() {
+          TranspilerContext::Continue(l) => {
+            if **l == TranspilerContext::While {
+              code.push_str(&format!("{}::continue::\n", " ".repeat(indent_level)));
+              self.context.pop();
+            }
+          }
+          _ => (),
+        };
 
         code.push_str(format!("{}end\n", " ".repeat(indent_level)).as_str());
       }
@@ -185,13 +221,11 @@ impl TranspilerToLua {
           let module_name = module_path.last().unwrap().to_string();
 
           for (name, alias) in &import.name {
-            let mut value = String::new();
-            if alias.is_some() {
-              let alias = alias.clone().unwrap();
-              value = alias.span.literal.clone();
+            let value = if alias.is_some() {
+              alias.clone().unwrap().span.literal.clone()
             } else {
-              value = name.span.literal.clone();
-            }
+              name.span.literal.clone()
+            };
 
             self.statement_imported.insert(value, module_name.clone());
           }
@@ -204,6 +238,18 @@ impl TranspilerToLua {
           ));
         }
       }
+      IRInstruction::Break(_) => {
+        code.push_str(&format!("{}break\n", " ".repeat(indent_level)));
+      }
+      IRInstruction::Continue(_) => {
+        let context = self.context.pop().unwrap();
+
+        self
+          .context
+          .push(TranspilerContext::Continue(Box::new(context)));
+
+        code.push_str(&format!("{}goto continue\n", " ".repeat(indent_level)));
+      }
     };
 
     code
@@ -211,7 +257,7 @@ impl TranspilerToLua {
 
   fn transpile_function_to_lua(&mut self, func: &IRFunction, indent_level: usize) -> String {
     let mut code = String::new();
-    
+
     if func.metadata.is_extern {
       return code;
     }
@@ -261,6 +307,10 @@ impl TranspilerToLua {
       }
 
       code.push_str(format!("{}end\n", " ".repeat(indent_level)).as_str());
+
+      if func.name == "main" {
+        code.push_str(&format!("{}{}()\n", " ".repeat(indent_level), func.name));
+      }
     }
 
     code

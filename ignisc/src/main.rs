@@ -69,15 +69,11 @@ fn run_file(path: &str) -> Result<(), ()> {
   }
 }
 
-fn run(
-  source: String,
-  module_path: String,
-  relp: bool,
-) -> Result<Vec<CodeResult>, ()> {
+fn run(source: String, module_path: String, relp: bool) -> Result<Vec<CodeResult>, ()> {
   let mut lexer: Lexer<'_> = Lexer::new(&source, module_path.clone());
   lexer.scan_tokens();
 
-  // lexer.display_lexer();
+  lexer.display_lexer();
 
   let mut parser = Parser::new(lexer.tokens);
   let parser_result = parser.parse();
@@ -121,13 +117,6 @@ fn run(
   //     display_ir(ir, 1);
   //   }
   // }
-
-  let mut generator = bytecode_generator::BytecodeGenerator::new();
-  
-  generator.generate(analyzer.irs.clone());
-  
-  let debug = bytecode_generator::debug::BytecodeDebug::new(generator.bytecodes);
-  debug.print_bytecode();
 
   let mut transpiler = TranspilerToLua::new();
   let mut code_results: Vec<CodeResult> = vec![];

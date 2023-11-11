@@ -1,7 +1,7 @@
 pub mod error;
 pub mod warning;
 
-use std::fmt::Display;
+use std::fmt::{Display, format};
 
 use {
   lexer::{text_span::TextSpan, token::Token},
@@ -450,5 +450,13 @@ impl DiagnosticList {
       format!("Imported function is not exported: {}", token.span.literal),
       token.span.clone(),
     )
+  }
+
+  fn report_break_outside_loop(&mut self, token: &Token) {
+    self.report_error(format!("Break outside loop"), token.span.clone());
+  }
+
+  fn report_continue_outside_loop(&mut self, token: &Token) {
+    self.report_error(format!("Continue outside loop"), token.span.clone());
   }
 }

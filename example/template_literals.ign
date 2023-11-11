@@ -1,0 +1,7 @@
+import { println } from "std:io";
+
+function main(): void {
+	let str: string = "Jhon Doe";
+	
+	println(`Name: ${str}`);
+}

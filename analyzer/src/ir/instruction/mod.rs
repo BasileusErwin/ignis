@@ -16,16 +16,17 @@ pub mod logical;
 pub mod ternary;
 pub mod unary;
 pub mod variable;
+pub mod ir_break;
+pub mod ir_continue;
 
 use self::{
   binary::IRBinary, block::IRBlock, literal::IRLiteral, unary::IRUnary, variable::IRVariable,
   logical::IRLogical, ir_if::IRIf, ir_while::IRWhile, function::IRFunction, call::IRCall,
   class::IRClass, assign::IRAssign, ir_return::IRReturn, ternary::IRTernary, ir_for_in::IRForIn,
-  ir_array::IRArray, import::IRImport,
+  ir_array::IRArray, import::IRImport, ir_break::IRBreak, ir_continue::IRContinue,
 };
 
 #[derive(Debug, Clone)]
-#[repr(C)]
 pub enum IRInstruction {
   Binary(IRBinary),
   Block(IRBlock),
@@ -44,4 +45,6 @@ pub enum IRInstruction {
   ForIn(IRForIn),
   Array(IRArray),
   Import(IRImport),
+  Break(IRBreak),
+  Continue(IRContinue),
 }

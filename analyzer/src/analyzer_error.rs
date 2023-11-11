@@ -35,4 +35,6 @@ pub enum AnalyzerDiagnosticError {
   ArrayElementTypeMismatch(Token),
   ModuleNotFound(Token),
   ImportedFunctionIsNotExported(Token),
+  BreakOutsideLoop(Token),
+  ContinueOutsideLoop(Token),
 }

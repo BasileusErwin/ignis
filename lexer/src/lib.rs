@@ -210,6 +210,10 @@ impl<'a> Lexer<'a> {
           return;
         }
       }
+      '`' => {
+        self.start = self.current - 1; // Guardar la posición inicial del literal de plantilla
+        self.template_string();
+      }
       _ => {
         if c.is_ascii_digit() {
           if self.number() {
@@ -267,6 +271,7 @@ impl<'a> Lexer<'a> {
       "char" => Some(TokenType::CharType),
       "void" => Some(TokenType::Void),
       "extern" => Some(TokenType::Extern),
+      "continue" => Some(TokenType::Continue),
       _ => None,
     }
   }
@@ -277,7 +282,30 @@ impl<'a> Lexer<'a> {
     c.is_ascii_digit() || c.is_ascii_lowercase() || c.is_ascii_uppercase() || c == '_'
   }
 
-  // TODO: Fix var with only one character
+  fn template_string(&mut self) {
+    loop {
+      match self.peek() {
+        '`' => {
+          self.add_token(TokenType::TemplateStringEnd);
+          self.advance();
+          break;
+        }
+        '$' if self.peek_next() == '{' => {
+          self.add_token(TokenType::ExpressionStart);
+          self.advance();
+          self.advance();
+        }
+        _ => {
+          self.advance();
+        }
+      }
+
+      if self.is_at_end() {
+        break;
+      }
+    }
+  }
+
   fn identifier(&mut self) -> TokenType {
     while self.is_identifier_letter() {
       self.advance();

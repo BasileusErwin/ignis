@@ -1,5 +1,7 @@
 pub mod block;
+pub mod break_statement;
 pub mod class;
+pub mod continue_statement;
 pub mod export;
 pub mod expression;
 pub mod extern_statement;
@@ -17,7 +19,8 @@ use serde_json::json;
 use self::{
   expression::ExpressionStatement, variable::Variable, if_statement::IfStatement, block::Block,
   while_statement::WhileStatement, function::FunctionStatement, return_statement::Return,
-  class::Class, for_in::ForIn, import::Import,
+  class::Class, for_in::ForIn, import::Import, break_statement::BreakStatement,
+  continue_statement::Continue,
 };
 
 use crate::{visitor::Visitor, statement::import::ImportSource};
@@ -34,6 +37,8 @@ pub enum Statement {
   Class(Class),
   ForIn(ForIn),
   Import(Import),
+  Break(BreakStatement),
+  Continue(Continue),
 }
 
 impl Statement {
@@ -51,6 +56,10 @@ impl Statement {
       Statement::Class(class) => visitor.visit_class_statement(class),
       Statement::ForIn(for_in) => visitor.visit_for_in_statement(for_in),
       Statement::Import(import) => visitor.visit_import_statement(import),
+      Statement::Break(break_statement) => visitor.visit_break_statement(break_statement),
+      Statement::Continue(continue_statement) => {
+        visitor.visit_continue_statement(continue_statement)
+      }
     }
   }
 
@@ -152,6 +161,16 @@ impl Statement {
             ImportSource::FileSystem => json!("FileSystem"),
             ImportSource::Package => json!("Package"),
           },
+        })
+      }
+      Statement::Break(_) => {
+        json!({
+            "type": "Break",
+        })
+      }
+      Statement::Continue(_) => {
+        json!({
+            "type": "Continue",
         })
       }
     }

@@ -1,3 +1,4 @@
 /target
 *.lua
 build/
+nohup.out

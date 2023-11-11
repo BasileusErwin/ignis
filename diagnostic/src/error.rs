@@ -48,6 +48,8 @@ pub enum DiagnosticError {
   ArgumentTypeMismatch(DataType, DataType, Token),
   ImmutableVariableAsMutableParameter(String, String, Token),
   ReturnOutsideFunction(Token),
+  BreakOutsideLoop(Token),
+  ContinueOutsideLoop(Token),
   NotIterable(Token),
   ArrayElementTypeMismatch(Token),
   ModuleNotFound(Token),
@@ -139,6 +141,10 @@ impl DiagnosticError {
       AnalyzerDiagnosticError::ModuleNotFound(token) => DiagnosticError::ModuleNotFound(token),
       AnalyzerDiagnosticError::ImportedFunctionIsNotExported(token) => {
         DiagnosticError::ImportedFunctionIsNotExported(token)
+      }
+      AnalyzerDiagnosticError::BreakOutsideLoop(token) => DiagnosticError::BreakOutsideLoop(token),
+      AnalyzerDiagnosticError::ContinueOutsideLoop(token) => {
+        DiagnosticError::ContinueOutsideLoop(token)
       }
     }
   }
@@ -308,6 +314,12 @@ impl DiagnosticError {
       }
       DiagnosticError::ImportedFunctionIsNotExported(token) => {
         diagnostics.report_imported_function_is_not_exported(token);
+      }
+      DiagnosticError::BreakOutsideLoop(token) => {
+        diagnostics.report_break_outside_loop(token);
+      }
+      DiagnosticError::ContinueOutsideLoop(token) => {
+        diagnostics.report_continue_outside_loop(token);
       }
     }
   }
