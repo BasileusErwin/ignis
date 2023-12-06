@@ -31,6 +31,7 @@ use {
   },
 };
 
+#[derive(Debug)]
 pub enum ParserDiagnosticError {
   ExpectedExpression(Token),
   ExpectedToken(TokenType, Token),

@@ -1,7 +1,7 @@
 pub mod error;
 pub mod warning;
 
-use std::fmt::{Display, format};
+use std::fmt::Display;
 
 use {
   lexer::{text_span::TextSpan, token::Token},

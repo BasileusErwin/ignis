@@ -23,6 +23,7 @@ analyzer = { path = "./analyzer" }
 diagnostic = { path = "./diagnostic" }
 to_lua = { path = "./to_lua" }
 bytecode_generator = { path = "./bytecode_generator" }
+to_c = { path = "./to_c" }
 
 serde = { version = "1.0.188", features = ["derive"] }
 serde_json = "1.0.105"
@@ -30,13 +31,14 @@ clap = { version = "4.4.8", features = ["derive"] }
 
 [workspace]
 members = [
-	"ignisc",
-	"lexer",
-	"parser",
-	"ast",
-	"analyzer",
-	"enums",
-	"diagnostic",
-	"to_lua",
-	"bytecode_generator",
+  "ignisc",
+  "lexer",
+  "parser",
+  "ast",
+  "analyzer",
+  "enums",
+  "diagnostic",
+  "bytecode_generator",
+  "to_lua",
+  "to_c",
 ]

@@ -1,22 +1,18 @@
 use std::{
   io::{self, Write, BufRead},
-  env,
-  process::exit,
+  process::{exit, Command, Stdio},
   fs,
-  backtrace::Backtrace,
 };
 
 mod cli;
 
-use analyzer::{
-  Analyzer,
-  debug::{display_block, display_ir},
-};
+use analyzer::{Analyzer, debug::display_ir};
 use clap::Parser as ClapParser;
 use cli::{Cli, DebugPrint, Backend, SubCommand};
 use parser::Parser;
 use lexer::Lexer;
 use ast::Ast;
+use to_c::TranspilerToC;
 use to_lua::TranspilerToLua;
 use diagnostic::{DiagnosticList, error::DiagnosticError};
 
@@ -92,6 +88,43 @@ impl App {
     }
   }
 
+  pub fn create_c_files(&self, code_results: Vec<CodeResult>)  -> Result<(), Box<dyn std::error::Error>>  {
+    for code_result in code_results {
+      let mut path = code_result.file_name.split("/").collect::<Vec<&str>>();
+      let code = code_result.code.clone();
+
+      let mut name = path.last().unwrap().replace(r".ign", "");
+
+      path.pop();
+
+      let mut build_path = "build/".to_string() + path.join("/").as_str();
+
+      fs::write(format!("{}/{}.c", &build_path, &name), &code).unwrap();
+
+      let mut child = Command::new("gcc")
+        .args(&["-x", "c", "-", "-o", &format!("{}/{}", &build_path, &name)]) // -x c indica que el input viene de stdin, "-" significa stdin
+        .stdin(Stdio::piped())
+        .spawn()?;
+
+      {
+        let stdin = child.stdin.as_mut().ok_or("Error al obtener stdin")?;
+        stdin.write_all(code.as_bytes())?;
+      }
+
+      let output = child.wait_with_output()?;
+
+      if !output.status.success() {
+        eprintln!(
+          "Error en la compilación: {}",
+          String::from_utf8_lossy(&output.stderr)
+        );
+        return Err("Compilación fallida".into());
+      }
+    }
+    
+    Ok(())
+  }
+
   pub fn run_file(&mut self) -> Result<(), ()> {
     match fs::read_to_string(self.file_path.clone()) {
       Ok(content) => {
@@ -102,6 +135,9 @@ impl App {
         match self.args.backend {
           Backend::Lua => {
             self.create_lua_files(result);
+          }
+          Backend::C => {
+            self.create_c_files(result);
           }
           _ => {
             println!("Backend not implemented");
@@ -170,7 +206,7 @@ impl App {
       }
     }
 
-    let mut transpiler = TranspilerToLua::new();
+    let mut transpiler = TranspilerToC::new();
     let mut code_results: Vec<CodeResult> = vec![];
 
     for result in analyzer.irs.iter() {
@@ -194,7 +230,7 @@ impl App {
     return Ok(code_results);
   }
 
-  pub fn run_prompt(&mut self) -> Result<(), String> {
+  pub fn _run_prompt(&mut self) -> Result<(), String> {
     loop {
       print!("(ignis) > ");
 
@@ -249,7 +285,7 @@ impl App {
 fn main() {
   let mut cli = Cli::parse();
 
-  cli.backend = Backend::Lua;
+  cli.backend = Backend::C;
 
   let mut app = App::new(cli);
 
