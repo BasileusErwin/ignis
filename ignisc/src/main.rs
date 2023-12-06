@@ -2,11 +2,12 @@ use std::{
   io::{self, Write, BufRead},
   process::{exit, Command, Stdio},
   fs,
+  collections::HashMap,
 };
 
 mod cli;
 
-use analyzer::{Analyzer, debug::display_ir};
+use analyzer::{Analyzer, debug::display_ir, ir::instruction::IRInstruction};
 use clap::Parser as ClapParser;
 use cli::{Cli, DebugPrint, Backend, SubCommand};
 use parser::Parser;
@@ -77,6 +78,7 @@ impl App {
 
       name.push_str(".lua");
       path.pop();
+      fs::create_dir_all(format!("build/{}", path.join("/"))).unwrap();
 
       let mut build_path = "build/".to_string() + path.join("/").as_str();
 
@@ -88,7 +90,10 @@ impl App {
     }
   }
 
-  pub fn create_c_files(&self, code_results: Vec<CodeResult>)  -> Result<(), Box<dyn std::error::Error>>  {
+  pub fn create_c_files(
+    &self,
+    code_results: Vec<CodeResult>,
+  ) -> Result<(), Box<dyn std::error::Error>> {
     for code_result in code_results {
       let mut path = code_result.file_name.split("/").collect::<Vec<&str>>();
       let code = code_result.code.clone();
@@ -96,6 +101,8 @@ impl App {
       let mut name = path.last().unwrap().replace(r".ign", "");
 
       path.pop();
+
+      fs::create_dir_all(format!("build/{}", path.join("/"))).unwrap();
 
       let mut build_path = "build/".to_string() + path.join("/").as_str();
 
@@ -115,13 +122,13 @@ impl App {
 
       if !output.status.success() {
         eprintln!(
-          "Error en la compilación: {}",
+          "Compilation error: {}",
           String::from_utf8_lossy(&output.stderr)
         );
-        return Err("Compilación fallida".into());
+        return Err("Failed compilation".into());
       }
     }
-    
+
     Ok(())
   }
 
@@ -132,18 +139,6 @@ impl App {
 
         let result = self.run()?;
 
-        match self.args.backend {
-          Backend::Lua => {
-            self.create_lua_files(result);
-          }
-          Backend::C => {
-            self.create_c_files(result);
-          }
-          _ => {
-            println!("Backend not implemented");
-          }
-        };
-
         Ok(())
       }
       Err(e) => {
@@ -153,7 +148,47 @@ impl App {
     }
   }
 
-  fn run(&mut self) -> Result<Vec<CodeResult>, ()> {
+  fn transpile(&mut self, irs: &HashMap<String, Vec<IRInstruction>>) {
+    match self.args.backend {
+      Backend::Lua => {
+        let mut transpiler = TranspilerToLua::new();
+        let mut code_results: Vec<CodeResult> = vec![];
+
+        for result in irs.iter() {
+          println!("Transpiling {}", result.0);
+          transpiler.transpile(result.1);
+
+          code_results.push(CodeResult::new(transpiler.code.clone(), result.0.clone()));
+        }
+
+        self.create_lua_files(code_results);
+        
+        println!("Done!");
+      }
+      Backend::C => {
+        let mut transpiler = TranspilerToC::new();
+        let mut code_results: Vec<CodeResult> = vec![];
+
+        for result in irs.into_iter() {
+          println!("Compiling {}", result.0);
+          transpiler.transpile(result.1);
+
+          code_results.push(CodeResult::new(transpiler.code.clone(), result.0.clone()));
+        }
+
+        self.create_c_files(code_results);
+
+        println!("Done!");
+      }
+      Backend::Bytecode => todo!(),
+      Backend::LLVM => todo!(),
+      _ => {
+        println!("Backend not implemented");
+      }
+    }
+  }
+
+  fn run(&mut self) -> Result<(), ()> {
     let mut lexer: Lexer<'_> = Lexer::new(&self.source, self.file_path.clone());
     lexer.scan_tokens();
 
@@ -206,15 +241,6 @@ impl App {
       }
     }
 
-    let mut transpiler = TranspilerToC::new();
-    let mut code_results: Vec<CodeResult> = vec![];
-
-    for result in analyzer.irs.iter() {
-      transpiler.transpile(result.1);
-
-      code_results.push(CodeResult::new(transpiler.code.clone(), result.0.clone()));
-    }
-
     // visit(ast.statements, &mut diagnostics, evaluator);
 
     if diagnostics.diagnostics.len() > 0 {
@@ -227,7 +253,9 @@ impl App {
 
     diagnostics.clean_diagnostic();
 
-    return Ok(code_results);
+    self.transpile(&analyzer.irs);
+
+    Ok(())
   }
 
   pub fn _run_prompt(&mut self) -> Result<(), String> {
@@ -284,8 +312,6 @@ impl App {
 
 fn main() {
   let mut cli = Cli::parse();
-
-  cli.backend = Backend::C;
 
   let mut app = App::new(cli);
 

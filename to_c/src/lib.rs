@@ -276,7 +276,7 @@ impl TranspilerToC {
     let mut code: String = String::new();
 
     self.context.push(TranspilerContext::Condition);
-    let condition = self.transpile_ir_to_c(&if_instruction.condition, indent_level);
+    let condition = self.transpile_ir_to_c(&if_instruction.condition, 0);
     self.context.pop();
 
     let mut if_block = String::new();
@@ -313,16 +313,17 @@ impl TranspilerToC {
     let mut code: String = String::new();
 
     self.context.push(TranspilerContext::Condition);
-    let condition = self.transpile_ir_to_c(&while_instruction.condition, indent_level);
+    let condition = self.transpile_ir_to_c(&while_instruction.condition, 0);
     self.context.pop();
 
     let block = &self.transpile_ir_to_c(&while_instruction.body, indent_level + 2);
 
     code.push_str(&format!(
-      "{}while ({}) {{{}}}\n",
+      "{}while ({}) {{\n{}{}}}\n",
       " ".repeat(indent_level),
       condition,
-      block
+      block,
+      " ".repeat(indent_level),
     ));
 
     code
