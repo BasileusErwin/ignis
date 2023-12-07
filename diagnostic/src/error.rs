@@ -54,6 +54,7 @@ pub enum DiagnosticError {
   ArrayElementTypeMismatch(Token),
   ModuleNotFound(Token),
   ImportedFunctionIsNotExported(Token),
+  InvalidCondition(Token),
 }
 
 impl DiagnosticError {
@@ -146,6 +147,7 @@ impl DiagnosticError {
       AnalyzerDiagnosticError::ContinueOutsideLoop(token) => {
         DiagnosticError::ContinueOutsideLoop(token)
       }
+      AnalyzerDiagnosticError::InvalidCondition(token) => DiagnosticError::InvalidCondition(token),
     }
   }
 
@@ -321,6 +323,9 @@ impl DiagnosticError {
       DiagnosticError::ContinueOutsideLoop(token) => {
         diagnostics.report_continue_outside_loop(token);
       }
+        DiagnosticError::InvalidCondition(token) => {
+        diagnostics.report_invalid_condition(token);
+        }
     }
   }
 }

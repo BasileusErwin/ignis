@@ -37,4 +37,5 @@ pub enum AnalyzerDiagnosticError {
   ImportedFunctionIsNotExported(Token),
   BreakOutsideLoop(Token),
   ContinueOutsideLoop(Token),
+  InvalidCondition(Token),
 }

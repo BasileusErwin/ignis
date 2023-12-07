@@ -5,7 +5,8 @@ use ast::{
     for_in::ForIn,
     import::{Import, ImportSource, ImportSymbol},
     function::FunctionDecorator,
-    break_statement::BreakStatement, continue_statement::Continue,
+    break_statement::BreakStatement,
+    continue_statement::Continue,
   },
   expression::array::Array,
 };
@@ -410,7 +411,7 @@ impl Parser {
     if self.match_token(&[TokenType::Break]) {
       return self.break_statement();
     }
-    
+
     if self.match_token(&[TokenType::Continue]) {
       return self.continue_statement();
     }
@@ -423,7 +424,7 @@ impl Parser {
       }
     }
   }
-  
+
   fn continue_statement(&mut self) -> Result<Statement, ParserDiagnosticError> {
     let token = self.previous();
 
@@ -705,6 +706,7 @@ impl Parser {
       Box::new(condition),
       Box::new(then_branch),
       Box::new(else_branch),
+      Box::new(self.peek()),
       DataType::Pending,
     ));
 
@@ -713,6 +715,7 @@ impl Parser {
         Box::new(children.pop().unwrap()),
         Box::new(expression),
         Box::new(children.pop().unwrap()),
+        Box::new(self.peek()),
         DataType::Pending,
       ));
     }
@@ -762,7 +765,7 @@ impl Parser {
     self.consume(TokenType::RightParen)?;
 
     let body: Statement = self.statement()?;
-    
+
     Ok(Statement::WhileStatement(WhileStatement::new(
       Box::new(condition),
       Box::new(body),
@@ -770,7 +773,6 @@ impl Parser {
   }
 
   fn for_statement(&mut self) -> Result<Statement, ParserDiagnosticError> {
-
     self.consume(TokenType::LeftParen)?;
 
     self.consume(TokenType::Let)?;

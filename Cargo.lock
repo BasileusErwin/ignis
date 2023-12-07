@@ -175,6 +175,7 @@ dependencies = [
  "parser",
  "serde",
  "serde_json",
+ "to_c",
  "to_lua",
 ]
 

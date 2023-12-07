@@ -459,4 +459,11 @@ impl DiagnosticList {
   fn report_continue_outside_loop(&mut self, token: &Token) {
     self.report_error(format!("Continue outside loop"), token.span.clone());
   }
+
+  fn report_invalid_condition(&mut self, token: &Token) {
+    self.report_error(
+      format!("Invalid condition, expected boolean"),
+      token.span.clone(),
+    )
+  }
 }
