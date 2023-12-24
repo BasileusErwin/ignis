@@ -10,7 +10,10 @@ use ast::{
   },
   expression::array::Array,
 };
-use enums::{data_type::DataType, token_type::TokenType};
+use enums::{
+  data_type::{DataType, self},
+  token_type::TokenType,
+};
 use lexer::{text_span::TextSpan, token};
 
 use {
@@ -490,11 +493,16 @@ impl Parser {
         self.consume(TokenType::Colon)?;
         let token = self.advance();
 
-        parameters.push(FunctionParameter::new(
-          param,
-          DataType::from_token_type(token.kind),
-          is_mut,
-        ));
+        let mut data_type = DataType::from_token_type(token.kind);
+
+        if self.check(TokenType::LeftBrack) {
+          self.advance();
+          self.consume(TokenType::RightBrack)?;
+
+          data_type = DataType::Array(Box::new(data_type));
+        }
+
+        parameters.push(FunctionParameter::new(param, data_type, is_mut));
 
         if !self.match_token(&[TokenType::Comma]) {
           break;
@@ -515,7 +523,14 @@ impl Parser {
       TokenType::BooleanType,
       TokenType::CharType,
     ]) {
-      return_type = Some(DataType::from_token_type(self.previous().kind));
+      let mut data_type: DataType = DataType::from_token_type(self.previous().kind);
+
+      if self.check(TokenType::LeftBrack) {
+        self.consume(TokenType::RightBrack)?;
+        data_type = DataType::Array(Box::new(data_type));
+      }
+
+      return_type = Some(data_type);
     } else {
       let token = &self.peek();
 

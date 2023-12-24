@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, array};
 
 use analyzer::{
   ir::{
@@ -102,13 +102,26 @@ impl TranspilerToC {
     };
 
     if variable.metadata.is_declaration {
-      format!(
-        "{}{} {} = {};\n",
-        " ".repeat(indent_level),
-        variable.data_type.to_c_type(variable.metadata.is_mutable),
-        variable.name,
-        var_value
-      )
+      match variable.data_type {
+        DataType::Array(_) => {
+          return format!(
+            "{}{} {}[] = {};\n",
+            " ".repeat(indent_level),
+            variable.data_type.to_c_type(variable.metadata.is_mutable),
+            variable.name,
+            var_value
+          );
+        }
+        _ => {
+          return format!(
+            "{}{} {} = {};\n",
+            " ".repeat(indent_level),
+            variable.data_type.to_c_type(variable.metadata.is_mutable),
+            variable.name,
+            var_value
+          );
+        }
+      }
     } else {
       format!("{}", variable.name)
     }
@@ -414,7 +427,19 @@ impl TranspilerToC {
         ))
       }
       IRInstruction::ForIn(_) => todo!(),
-      IRInstruction::Array(_) => todo!(),
+      IRInstruction::Array(array) => {
+        let mut elements = String::new();
+
+        for element in &array.elements {
+          elements.push_str(&self.transpile_ir_to_c(element, indent_level));
+          elements.push_str(", ");
+        }
+
+        elements.pop();
+        elements.pop();
+
+        code.push_str(&format!("{{ {} }}", elements))
+      }
       IRInstruction::Import(import) => {
         if import.path.contains("std:") {
           match import.path.as_str() {
