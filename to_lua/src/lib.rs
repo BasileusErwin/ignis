@@ -186,7 +186,6 @@ impl TranspilerToLua {
           self.transpile_ir_to_lua(&for_in.iterable, indent_level)
         ));
 
-
         code.push_str(&self.transpile_ir_to_lua(&for_in.body, indent_level + 2));
 
         match self.context.last().unwrap() {

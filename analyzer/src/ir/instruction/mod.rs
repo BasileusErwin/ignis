@@ -6,6 +6,8 @@ pub mod class;
 pub mod function;
 pub mod import;
 pub mod ir_array;
+pub mod ir_break;
+pub mod ir_continue;
 pub mod ir_for_in;
 pub mod ir_if;
 pub mod ir_println;
@@ -16,8 +18,6 @@ pub mod logical;
 pub mod ternary;
 pub mod unary;
 pub mod variable;
-pub mod ir_break;
-pub mod ir_continue;
 
 use self::{
   binary::IRBinary, block::IRBlock, literal::IRLiteral, unary::IRUnary, variable::IRVariable,

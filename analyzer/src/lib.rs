@@ -306,10 +306,10 @@ impl Visitor<AnalyzerResult> for Analyzer {
         *expression.token.clone(),
       ));
     }
-    
+
     let then_type = self.extract_data_type(&then_branch);
     let else_type = self.extract_data_type(&else_branch);
-    
+
     if then_type != else_type {
       return Err(AnalyzerDiagnosticError::TypeMismatch(
         then_type,
