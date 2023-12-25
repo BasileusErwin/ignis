@@ -51,10 +51,17 @@ pub enum ParserDiagnosticError {
 
 type ParserResult<T> = Result<T, ParserDiagnosticError>;
 
+enum ParserContext {
+  Function,
+  Class,
+}
+
 pub struct Parser {
   pub tokens: Vec<Token>,
   current: usize,
   pub diagnostics: Vec<ParserDiagnosticError>,
+  context: Vec<ParserContext>,
+  class_declarations: Vec<String>,
 }
 
 impl Parser {
@@ -63,6 +70,8 @@ impl Parser {
       tokens,
       current: 0,
       diagnostics: Vec::new(),
+      context: Vec::new(),
+      class_declarations: Vec::new(),
     }
   }
 
@@ -380,11 +389,22 @@ impl Parser {
     }
 
     if self.match_token(&[TokenType::Class]) {
-      return self.class_declaration();
+      self.context.push(ParserContext::Class);
+      let value = self.class_declaration();
+
+      self.context.pop();
+
+      return value;
     }
 
     if self.match_token(&[TokenType::Function]) {
-      return self.function(FunctionKind::Function, false, None);
+      self.context.push(ParserContext::Function);
+
+      let value = self.function_statement(false, None);
+
+      self.context.pop();
+
+      return value;
     }
 
     if self.match_token(&[TokenType::Return]) {
@@ -561,20 +581,6 @@ impl Parser {
     )))
   }
 
-  fn function(
-    &mut self,
-    kind: FunctionKind,
-    is_public: bool,
-    decorator: Option<FunctionDecorator>,
-  ) -> ParserResult<Statement> {
-    match kind {
-      FunctionKind::Function => self.function_statement(is_public, decorator),
-      FunctionKind::Method => todo!(),
-      FunctionKind::Initializer => todo!(),
-      FunctionKind::Lambda => todo!(),
-    }
-  }
-
   fn block(&mut self) -> ParserResult<Statement> {
     let mut statements: Vec<Statement> = Vec::new();
 
@@ -605,11 +611,24 @@ impl Parser {
 
     let mut type_annotation = DataType::from_token_type(token.kind.clone());
 
+    if type_annotation == DataType::None && self.class_declarations.contains(&token.span.literal) {
+      type_annotation = DataType::ClassType(token.span.literal.clone());
+    }
+
     if type_annotation == DataType::None {
       return Err(ParserDiagnosticError::ExpectedTypeAfterVariable(token));
     }
 
     self.advance();
+
+    if self.match_token(&[TokenType::SemiColon]) {
+      return Ok(Statement::Variable(Variable::new(
+        Box::new(name),
+        None,
+        type_annotation,
+        VariableMetadata::new(mutable, false, false, false, false),
+      )));
+    }
 
     if self.match_token(&[TokenType::LeftBrack]) {
       self.consume(TokenType::RightBrack)?;
@@ -904,23 +923,209 @@ impl Parser {
     self.tokens[self.current - 1].clone()
   }
 
-  fn class_declaration(&mut self) -> Result<Statement, ParserDiagnosticError> {
+  fn attribute_class_declaration(
+    &mut self,
+    name: Token,
+    is_mutable: bool,
+    is_public: bool,
+  ) -> ParserResult<Variable> {
+    let token = self.peek();
+    let mut type_annotation = DataType::from_token_type(token.kind.clone());
+
+    if type_annotation == DataType::None && self.class_declarations.contains(&token.span.literal) {
+      type_annotation = DataType::ClassType(token.span.literal.clone());
+    }
+
+    if type_annotation == DataType::None {
+      return Err(ParserDiagnosticError::ExpectedTypeAfterVariable(
+        self.peek(),
+      ));
+    }
+
+    self.advance();
+
+    if self.match_token(&[TokenType::LeftBrack]) {
+      self.consume(TokenType::RightBrack)?;
+
+      type_annotation = DataType::Array(Box::new(type_annotation));
+    }
+
+    let mut initializer: Option<Box<Expression>> = None;
+
+    if self.match_token(&[TokenType::Equal]) {
+      let mut value = self.expression()?;
+
+      match value {
+        Expression::Array(a) => {
+          value = Expression::Array(Array::new(
+            a.token.clone(),
+            a.elements,
+            type_annotation.clone(),
+          ));
+        }
+        _ => (),
+      };
+
+      initializer = Some(Box::new(value));
+    }
+
+    self.consume(TokenType::SemiColon);
+
+    Ok(Variable::new(
+      Box::new(name),
+      initializer,
+      type_annotation,
+      VariableMetadata::new(is_mutable, false, false, is_public, false),
+    ))
+  }
+
+  fn method_declaration(
+    &mut self,
+    name: Token,
+    is_public: bool,
+    decorator: Option<FunctionDecorator>,
+  ) -> ParserResult<FunctionStatement> {
+    let mut parameters: Vec<FunctionParameter> = Vec::new();
+
+    if !self.check(TokenType::RightParen) {
+      loop {
+        if parameters.len() >= 255 {
+          return Err(ParserDiagnosticError::InvalidNumberOfArguments(
+            255,
+            parameters.len(),
+            name.clone(),
+          ));
+        }
+
+        let is_mut: bool = if self.peek().kind == TokenType::Mut {
+          self.advance();
+          true
+        } else {
+          false
+        };
+
+        let param = self.consume(TokenType::Identifier)?;
+
+        self.consume(TokenType::Colon)?;
+        let token = self.advance();
+
+        let mut data_type = DataType::from_token_type(token.kind);
+
+        if self.check(TokenType::LeftBrack) {
+          self.advance();
+          self.consume(TokenType::RightBrack)?;
+
+          data_type = DataType::Array(Box::new(data_type));
+        }
+
+        parameters.push(FunctionParameter::new(param, data_type, is_mut));
+
+        if !self.match_token(&[TokenType::Comma]) {
+          break;
+        }
+      }
+    }
+
+    self.consume(TokenType::RightParen)?;
+
+    let return_type: Option<DataType>;
+    if self.class_declarations.contains(&name.span.literal) {
+      return_type = Some(DataType::ClassType(name.span.literal.clone()));
+    } else {
+      self.consume(TokenType::Colon)?;
+
+      let token = self.peek();
+
+      let mut data_type: DataType = DataType::from_token_type(token.kind.clone());
+
+      if data_type == DataType::None && self.class_declarations.contains(&token.span.literal) {
+        data_type = DataType::ClassType(token.span.literal.clone());
+      }
+
+      if data_type == DataType::None {
+        let token = &self.peek();
+
+        return Err(ParserDiagnosticError::ExpectedReturnTypeAfterFunction(
+          token.clone(),
+        ));
+      }
+
+      self.advance();
+
+      if self.check(TokenType::LeftBrack) {
+        self.consume(TokenType::RightBrack)?;
+        data_type = DataType::Array(Box::new(data_type));
+      }
+
+      return_type = Some(data_type);
+    }
+
+    let mut body: Vec<Statement> = Vec::new();
+
+    if !self.match_token(&[TokenType::SemiColon]) {
+      self.consume(TokenType::LeftBrace)?;
+
+      body.push(self.block()?);
+    }
+
+    Ok(FunctionStatement::new(
+      name,
+      parameters,
+      body,
+      return_type,
+      is_public,
+      if decorator.is_some() {
+        vec![decorator.unwrap()]
+      } else {
+        vec![]
+      },
+    ))
+  }
+
+  fn class_declaration(&mut self) -> ParserResult<Statement> {
     let name: Token = self.consume(TokenType::Identifier)?;
 
+    self.class_declarations.push(name.span.literal.clone());
+
     let mut methods: Vec<FunctionStatement> = Vec::new();
+    let mut attributes: Vec<Variable> = Vec::new();
 
-    // self.consume(TokenType::LeftBrace)?;
+    self.consume(TokenType::LeftBrace)?;
 
-    // while !self.check(TokenType::RightBrace) && !self.is_at_end() {
-    //   let method = match self.function(FunctionKind::Method)? {
-    //     Statement::FunctionStatement(function) => methods.push(function),
-    //     _ => (),
-    //   };
-    // }
+    while !self.check(TokenType::RightBrace) && !self.is_at_end() {
+      let is_public = if self.match_token(&[TokenType::Public]) {
+        true
+      } else {
+        false
+      };
+
+      if self.match_token(&[TokenType::Public, TokenType::Private]) {
+        self.advance();
+      }
+
+      if self.match_token(&[TokenType::Mut]) {
+        let name = self.consume(TokenType::Identifier)?;
+        attributes.push(self.attribute_class_declaration(name, true, is_public)?);
+        continue;
+      }
+
+      let name = self.consume(TokenType::Identifier)?;
+
+      if self.match_token(&[TokenType::LeftParen]) {
+        self.method_declaration(name, is_public, None)?;
+      } else if self.match_token(&[TokenType::Colon]) {
+        attributes.push(self.attribute_class_declaration(name, false, is_public)?);
+      } else {
+        return Err(ParserDiagnosticError::ExpectedToken(
+          TokenType::SemiColon,
+          self.peek(),
+        ));
+      }
+    }
 
     self.consume(TokenType::RightBrace)?;
 
-    Ok(Statement::Class(Class::new(name, methods)))
+    Ok(Statement::Class(Class::new(name, methods, attributes)))
   }
 
   fn import_statement(&mut self) -> Result<Statement, ParserDiagnosticError> {
@@ -979,7 +1184,12 @@ impl Parser {
    */
   fn export_statement(&mut self) -> Result<Statement, ParserDiagnosticError> {
     if self.match_token(&[TokenType::Function]) {
-      let function = self.function(FunctionKind::Function, true, None)?;
+      self.context.push(ParserContext::Function);
+
+      let function = self.function_statement(true, None)?;
+
+      self.context.pop();
+
       return Ok(function);
     } else {
       return Err(ParserDiagnosticError::ExpectedToken(
@@ -992,7 +1202,11 @@ impl Parser {
   fn decoration_statement(&mut self) -> Result<Statement, ParserDiagnosticError> {
     match self.peek().kind {
       TokenType::Function => {
-        let function = self.function(FunctionKind::Function, true, None)?;
+        self.context.push(ParserContext::Function);
+
+        let function = self.function_statement(true, None)?;
+
+        self.context.pop();
         return Ok(function);
       }
       TokenType::Extern => {
@@ -1007,11 +1221,11 @@ impl Parser {
 
         self.consume(TokenType::Function)?;
 
-        let func = self.function(
-          FunctionKind::Function,
-          is_public,
-          Some(FunctionDecorator::Extern(path)),
-        )?;
+        self.context.push(ParserContext::Function);
+
+        let func = self.function_statement(is_public, Some(FunctionDecorator::Extern(path)))?;
+
+        self.context.pop();
 
         return Ok(func);
       }
