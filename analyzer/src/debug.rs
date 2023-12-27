@@ -173,12 +173,19 @@ pub fn display_ir(instruction: &IRInstruction, indent_level: usize) {
     IRInstruction::Continue(_) => {
       println!("{}Continue", indent);
     }
+    IRInstruction::Get(get) => {
+      println!("{}Get:", indent);
+      println!("{}Object:", indent_subtext);
+      // display_ir(&*get.object, indent_level);
+      println!("{}Property: {}", indent_subtext, get.name);
+      println!("{}DataType: {}", indent_subtext, get.data_type.to_string());
+    }
   };
 }
 
 pub fn display_block(block: &IRBlock, owner: &str, indent_level: usize) {
   let indent = "  ".repeat(indent_level);
-  let indent_subtext = indent.repeat(1);
+  let indent_subtext = indent.clone();
 
   println!(
     "{}Block, owner {}:",
@@ -204,7 +211,7 @@ pub fn display_block(block: &IRBlock, owner: &str, indent_level: usize) {
     println!("{}Empty", indent_subtext.repeat(2));
   } else {
     for var in &block.scopes_variables {
-      display_variable(&var, indent_level + 1);
+      display_variable(var, indent_level + 1);
     }
   }
 }

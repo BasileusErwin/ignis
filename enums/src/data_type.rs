@@ -1,3 +1,5 @@
+use std::fmt::{Display, Formatter};
+
 use super::token_type::TokenType;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -53,8 +55,8 @@ impl DataType {
       DataType::Char => kind.push_str("char"),
       DataType::String => kind.push_str("char*"),
       DataType::Void | DataType::Null | DataType::None | DataType::Pending => kind.push_str("void"),
-      DataType::Variable(name) => todo!(),
-      DataType::ClassType(name) => todo!(),
+      DataType::Variable(_name) => todo!(),
+      DataType::ClassType(_name) => todo!(),
       DataType::Array(array) => kind.push_str(format!("{}", array.to_c_type(true)).as_str()),
       DataType::Callable(_, _) => todo!(),
       DataType::GenericType { base, parameters } => todo!(),
@@ -66,44 +68,81 @@ impl DataType {
 
     kind
   }
+}
 
-  pub fn to_string(&self) -> String {
+impl Display for DataType {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
-      DataType::String => "String".to_string(),
-      DataType::Int => "Int".to_string(),
-      DataType::Float => "Float".to_string(),
-      DataType::Boolean => "Boolean".to_string(),
-      DataType::Char => "Char".to_string(),
-      DataType::None => "Null".to_string(),
-      DataType::Pending => "Pending".to_string(),
-      DataType::Variable(name) => name.to_string(),
-      DataType::ClassType(name) => name.clone(),
+      DataType::String => write!(f, "String"),
+      DataType::Int => write!(f, "Int"),
+      DataType::Float => write!(f, "Float"),
+      DataType::Boolean => write!(f, "Boolean"),
+      DataType::Char => write!(f, "Char"),
+      DataType::None => write!(f, "None"),
+      DataType::Pending => write!(f, "Pending"),
+      DataType::Variable(name) => write!(f, "{}", name),
+      DataType::ClassType(name) => write!(f, "{}", name),
       DataType::GenericType { base, parameters } => {
-        let params: Vec<String> = parameters.iter().map(|p| p.to_string()).collect();
-        format!("{}<{}>", base.to_string(), params.join(", "))
+        write!(
+          f,
+          "{}<{}>",
+          base.to_string(),
+          parameters
+            .iter()
+            .map(|p| p.to_string())
+            .collect::<Vec<String>>()
+            .join(", ")
+        )
       }
       DataType::UnionType(types) => {
-        let type_strings: Vec<String> = types.iter().map(|t| t.to_string()).collect();
-        format!("Union<{}>", type_strings.join(" | "))
+        write!(
+          f,
+          "Union<{}>",
+          types
+            .iter()
+            .map(|t| t.to_string())
+            .collect::<Vec<String>>()
+            .join(" | ")
+        )
       }
       DataType::Array(types) => {
-        format!("Array<{}>", types.to_string())
+        write!(f, "Array<{}>", types.to_string())
       }
       DataType::IntersectionType(types) => {
-        let type_strings: Vec<String> = types.iter().map(|t| t.to_string()).collect();
-        format!("Intersection<{}>", type_strings.join(" & "))
+        write!(
+          f,
+          "Intersection<{}>",
+          types
+            .iter()
+            .map(|t| t.to_string())
+            .collect::<Vec<String>>()
+            .join(" & ")
+        )
       }
       DataType::TupleType(types) => {
-        let type_strings: Vec<String> = types.iter().map(|t| t.to_string()).collect();
-        format!("Tuple<{}>", type_strings.join(", "))
+        write!(
+          f,
+          "Tuple<{}>",
+          types
+            .iter()
+            .map(|t| t.to_string())
+            .collect::<Vec<String>>()
+            .join(", ")
+        )
       }
-      DataType::AliasType(alias) => alias.clone(),
-      DataType::Null => "Null".to_string(),
-      DataType::Void => "Void".to_string(),
-      DataType::Callable(params, ret) => {
-        let params: Vec<String> = params.iter().map(|p| p.to_string()).collect();
-        format!("({}) -> {}", params.join(", "), ret.to_string())
-      }
+      DataType::AliasType(alias) => write!(f, "{}", alias),
+      DataType::Null => write!(f, "Null"),
+      DataType::Void => write!(f, "Void"),
+      DataType::Callable(params, ret) => write!(
+        f,
+        "({}) -> {}",
+        params
+          .iter()
+          .map(|p| p.to_string())
+          .collect::<Vec<String>>()
+          .join(", "),
+        ret.to_string()
+      ),
     }
   }
 }

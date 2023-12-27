@@ -8,7 +8,7 @@ use ast::{
     break_statement::BreakStatement,
     continue_statement::Continue,
   },
-  expression::{array::Array, new::NewExpression},
+  expression::{array::Array, get::Get},
 };
 use enums::{data_type::DataType, token_type::TokenType};
 use lexer::text_span::TextSpan;
@@ -220,6 +220,14 @@ impl Parser {
     let mut expression: Expression = self.primary()?;
 
     loop {
+      if self.match_token(&[TokenType::Dot]) {
+        let name = self.consume(TokenType::Identifier)?;
+
+        expression = Expression::Get(Get::new(Box::new(expression), name));
+
+        continue;
+      }
+
       if !self.match_token(&[TokenType::LeftParen]) {
         break;
       }
@@ -362,6 +370,7 @@ impl Parser {
       Expression::Ternary(ternary) => ternary.data_type.clone(),
       Expression::Call(call) => call.return_type.clone(),
       Expression::Array(a) => a.data_type.clone(),
+        Expression::Get(_) => DataType::Pending
     }
   }
 
