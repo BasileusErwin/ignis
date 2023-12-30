@@ -2,7 +2,7 @@ use enums::data_type::DataType;
 
 use crate::ir::instruction_type::IRInstructionType;
 
-use super::IRInstruction;
+use super::{IRInstruction, IRInstructionTrait};
 
 #[derive(Debug, Clone)]
 pub struct IRUnary {
@@ -22,5 +22,14 @@ impl IRUnary {
       right,
       data_type,
     }
+  }
+}
+
+impl IRInstructionTrait for IRUnary {
+  fn to_json(&self) -> serde_json::Value {
+    serde_json::json!({
+      "type": self.instruction_type.to_string(),
+      "right": self.right.to_json(),
+    })
   }
 }

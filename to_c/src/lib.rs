@@ -1,4 +1,4 @@
-use std::{collections::HashMap, array};
+use std::collections::HashMap;
 
 use analyzer::{
   ir::{
@@ -224,6 +224,7 @@ impl TranspilerToC {
         IRInstruction::Break(_) => todo!(),
         IRInstruction::Continue(_) => todo!(),
         IRInstruction::Get(_) => todo!(),
+        IRInstruction::ClassInstance(_) => todo!(),
       };
 
       args.push_str(",");
@@ -357,6 +358,7 @@ impl TranspilerToC {
         AnalyzerValue::Null | AnalyzerValue::None => "NULL".to_string(),
         AnalyzerValue::Return(_) => todo!(),
         AnalyzerValue::Function(_) => todo!(),
+        AnalyzerValue::Class(_) => todo!(),
       }),
       IRInstruction::Binary(binary) => {
         let left = self.transpile_ir_to_c(&binary.left, indent_level);
@@ -454,6 +456,7 @@ impl TranspilerToC {
       IRInstruction::Break(_) => todo!(),
       IRInstruction::Continue(_) => todo!(),
         IRInstruction::Get(_) => todo!(),
+        IRInstruction::ClassInstance(_) => todo!(),
     };
 
     code

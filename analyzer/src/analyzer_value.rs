@@ -1,5 +1,9 @@
+use std::fmt::{Display, Formatter};
+
 use ast::statement::function::FunctionStatement;
 use enums::{data_type::DataType, literal_value::LiteralValue};
+
+use crate::ir::instruction::{class_instance::IRClassInstance};
 
 #[derive(Debug)]
 pub enum AnalyzerValue {
@@ -9,6 +13,7 @@ pub enum AnalyzerValue {
   Boolean(bool),
   Return(Box<AnalyzerValue>),
   Function(Box<FunctionStatement>),
+  Class(Box<IRClassInstance>),
   Null,
   None,
 }
@@ -24,23 +29,31 @@ impl Clone for AnalyzerValue {
       AnalyzerValue::None => AnalyzerValue::None,
       AnalyzerValue::Return(r) => r.as_ref().clone(),
       AnalyzerValue::Function(f) => AnalyzerValue::Function(f.clone()),
+        AnalyzerValue::Class(_) => todo!(),
+    }
+  }
+}
+
+impl Display for AnalyzerValue {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    match self {
+      AnalyzerValue::String(s) => write!(f, "{}", s),
+      AnalyzerValue::Int(i) => write!(f, "{}", i),
+      AnalyzerValue::Float(d) => write!(f, "{}", d),
+      AnalyzerValue::Boolean(b) => write!(f, "{}", b),
+      AnalyzerValue::Null => write!(f, "null"),
+      AnalyzerValue::None => write!(f, "none"),
+      AnalyzerValue::Return(r) => write!(f, "{}", r),
+      AnalyzerValue::Function(_) => write!(f, "function"),
+      AnalyzerValue::Class(class) => {
+        let class = class.as_ref();
+        write!(f, "{}", class.name)
+      }
     }
   }
 }
 
 impl AnalyzerValue {
-  pub fn to_string(&self) -> String {
-    match self {
-      AnalyzerValue::String(_) => "string".to_string(),
-      AnalyzerValue::Int(_) => "int".to_string(),
-      AnalyzerValue::Float(_) => "Float".to_string(),
-      AnalyzerValue::Boolean(_) => "boolean".to_string(),
-      AnalyzerValue::None | AnalyzerValue::Null => "null".to_string(),
-      AnalyzerValue::Return(_) => "return".to_string(),
-      AnalyzerValue::Function(_) => "function".to_string(),
-    }
-  }
-
   pub fn to_data_type(&self) -> DataType {
     match self {
       AnalyzerValue::String(_) => DataType::String,
@@ -53,6 +66,10 @@ impl AnalyzerValue {
         let value = f.return_type.as_ref();
 
         value.unwrap_or(&DataType::Void).clone()
+      }
+      AnalyzerValue::Class(class) => {
+        let class = class.as_ref();
+        DataType::ClassType(class.name.clone())
       }
     }
   }

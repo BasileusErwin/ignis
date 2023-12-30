@@ -10,7 +10,7 @@ use ast::{
     method::{MethodStatement, MethodMetadata},
     property::PropertyStatement,
   },
-  expression::{array::Array, get::Get},
+  expression::{array::Array, get::Get, new::NewExpression},
 };
 use enums::{data_type::DataType, token_type::TokenType};
 use lexer::text_span::TextSpan;
@@ -210,13 +210,37 @@ impl Parser {
       )));
     }
 
-    let is_constructor: bool = self.check(TokenType::New);
-    self.call(is_constructor)
+    self.call()
   }
 
-  fn call(&mut self, is_constructor: bool) -> ParserResult<Expression> {
-    if is_constructor {
-      self.advance();
+  fn call(&mut self) -> ParserResult<Expression> {
+    if self.match_token(&[TokenType::New]) {
+      let name = self.consume(TokenType::Identifier)?;
+
+      self.consume(TokenType::LeftParen)?;
+
+      let mut arguments: Vec<Expression> = Vec::new();
+
+      if !self.check(TokenType::RightParen) {
+        loop {
+          if arguments.len() >= 255 {
+            let token = &self.peek();
+            return Err(Box::new(ParserDiagnosticError::InvalidNumberOfArguments(
+              255,
+              arguments.len(),
+              token.clone(),
+            )));
+          }
+          arguments.push(self.expression()?);
+          if !self.match_token(&[TokenType::Comma]) {
+            break;
+          }
+        }
+      }
+
+      self.consume(TokenType::RightParen)?;
+
+      return Ok(Expression::New(NewExpression::new(name, arguments)));
     }
 
     let mut expression: Expression = self.primary()?;
@@ -234,7 +258,7 @@ impl Parser {
         break;
       }
 
-      expression = self.finish_call(expression, is_constructor)?;
+      expression = self.finish_call(expression)?;
     }
 
     Ok(expression)
@@ -294,7 +318,7 @@ impl Parser {
     }
   }
 
-  fn finish_call(&mut self, callee: Expression, is_constructor: bool) -> ParserResult<Expression> {
+  fn finish_call(&mut self, callee: Expression) -> ParserResult<Expression> {
     let mut arguments: Vec<Expression> = Vec::new();
 
     if !self.check(TokenType::RightParen) {
@@ -324,7 +348,6 @@ impl Parser {
       token,
       arguments,
       DataType::Pending,
-      is_constructor,
     )))
   }
 
@@ -373,6 +396,7 @@ impl Parser {
       Expression::Call(call) => call.return_type.clone(),
       Expression::Array(a) => a.data_type.clone(),
       Expression::Get(_) => DataType::Pending,
+      Expression::New(new) => DataType::ClassType(new.name.span.literal.clone())
     }
   }
 

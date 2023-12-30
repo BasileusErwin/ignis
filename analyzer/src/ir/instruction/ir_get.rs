@@ -1,5 +1,5 @@
 use enums::data_type::DataType;
-use super::class::IRClass;
+use super::{class::IRClass, IRInstructionTrait};
 
 #[derive(Debug, Clone)]
 pub struct IRGet {
@@ -15,5 +15,16 @@ impl IRGet {
       object,
       data_type,
     }
+  }
+}
+
+impl IRInstructionTrait for IRGet {
+  fn to_json(&self) -> serde_json::Value {
+    serde_json::json!({
+      "type": "IRGet",
+      "name": self.name,
+      "object": self.object.to_json(),
+      "data_type": self.data_type.to_string(),
+    })
   }
 }

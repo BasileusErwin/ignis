@@ -1,6 +1,6 @@
 use enums::data_type::DataType;
 
-use super::IRInstruction;
+use super::{IRInstruction, IRInstructionTrait};
 
 #[derive(Debug, Clone)]
 pub struct IRTernary {
@@ -23,5 +23,16 @@ impl IRTernary {
       else_branch,
       data_type,
     }
+  }
+}
+
+impl IRInstructionTrait for IRTernary {
+  fn to_json(&self) -> serde_json::Value {
+    serde_json::json!({
+      "type": "IRTernary",
+      "condition": self.condition.to_json(),
+      "then_branch": self.then_branch.to_json(),
+      "else_branch": self.else_branch.to_json(),
+    })
   }
 }

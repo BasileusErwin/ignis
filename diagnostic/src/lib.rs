@@ -1,7 +1,7 @@
 pub mod error;
 pub mod warning;
 
-use std::fmt::Display;
+use std::fmt::{Display, format};
 
 use {
   lexer::{text_span::TextSpan, token::Token},
@@ -280,7 +280,7 @@ impl DiagnosticList {
     )
   }
 
-  fn report_invalid_unary_operator(&mut self, token: &&Token) {
+  fn report_invalid_unary_operator(&mut self, token: &Token) {
     self.report_error(
       format!("Invalid unary operator '{}'", token.span.literal),
       token.span.clone(),
@@ -392,7 +392,7 @@ impl DiagnosticList {
     &mut self,
     parameter_name: &str,
     variable_name: &str,
-    token: &&Token,
+    token: &Token,
   ) {
     self.report_error(
       format!(
@@ -446,5 +446,44 @@ impl DiagnosticList {
 
   fn report_method_outside_class(&mut self, token: &Token) {
     self.report_error(format!("Method outside class"), token.span.clone())
+  }
+
+  fn report_property_outside_class(&mut self, token: &Token) {
+    self.report_error(format!("Property outside class"), token.span.clone());
+  }
+
+  fn report_property_already_defined(&mut self, token: &Token) {
+    self.report_error(
+      format!("Property '{}' was already defined", token.span.literal),
+      token.span.clone(),
+    );
+  }
+
+  fn report_undefined_class(&mut self, token: &Token) {
+    self.report_error(
+      format!("Undefined class '{}'", token.span.literal),
+      token.span.clone(),
+    );
+  }
+
+  fn report_undefined_methods(&mut self, token: &Token) {
+    self.report_error(
+      format!("Undefined method '{}'", token.span.literal),
+      token.span.clone(),
+    )
+  }
+
+  fn report_not_a_class(&mut self, token: &Token) {
+    self.report_error(
+      format!("'{}' is not a class", token.span.literal),
+      token.span.clone(),
+    );
+  }
+
+  fn report_undefined_property(&mut self, token: &Token) {
+    self.report_error(
+      format!("Undefined property '{}'", token.span.literal),
+      token.span.clone(),
+    );
   }
 }
