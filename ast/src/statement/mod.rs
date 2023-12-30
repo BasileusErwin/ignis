@@ -10,6 +10,8 @@ pub mod forof;
 pub mod function;
 pub mod if_statement;
 pub mod import;
+pub mod method;
+pub mod property;
 pub mod return_statement;
 pub mod variable;
 pub mod while_statement;
@@ -20,7 +22,7 @@ use self::{
   expression::ExpressionStatement, variable::Variable, if_statement::IfStatement, block::Block,
   while_statement::WhileStatement, function::FunctionStatement, return_statement::Return,
   class::Class, for_in::ForIn, import::Import, break_statement::BreakStatement,
-  continue_statement::Continue,
+  continue_statement::Continue, method::MethodStatement, property::PropertyStatement,
 };
 
 use crate::{visitor::Visitor, statement::import::ImportSource};
@@ -39,6 +41,8 @@ pub enum Statement {
   Import(Import),
   Break(BreakStatement),
   Continue(Continue),
+  Method(MethodStatement),
+  Property(PropertyStatement),
 }
 
 impl Statement {
@@ -60,6 +64,8 @@ impl Statement {
       Statement::Continue(continue_statement) => {
         visitor.visit_continue_statement(continue_statement)
       }
+      Statement::Method(method) => visitor.visit_method_statement(method),
+      Statement::Property(property) => visitor.visit_property_statement(property),
     }
   }
 
@@ -133,8 +139,8 @@ impl Statement {
         json!({
           "type": "Class",
           "name": class.name.span.literal,
-          "methods": class.methods.iter().map(|x| Statement::FunctionStatement(x.clone()).to_json()).collect::<Vec<serde_json::Value>>(),
-          "properties": class.properties.iter().map(|x| Statement::Variable(x.clone()).to_json()).collect::<Vec<serde_json::Value>>(),
+          "methods": class.methods.iter().map(|x| x.to_json()).collect::<Vec<serde_json::Value>>(),
+          "properties": class.properties.iter().map(|x| x.to_json()).collect::<Vec<serde_json::Value>>(),
         })
       }
       Statement::ForIn(for_in) => {
@@ -171,6 +177,33 @@ impl Statement {
       Statement::Continue(_) => {
         json!({
             "type": "Continue",
+        })
+      }
+      Statement::Method(method) => {
+        json!({
+          "type": "Method",
+          "name": method.name.span.literal,
+          "parameters": method.parameters.iter().map(|x| x.to_json()).collect::<Vec<serde_json::Value>>(),
+          "body": method.body.iter().map(|x| x.to_json()).collect::<Vec<serde_json::Value>>(),
+          "return_type": match &method.return_type {
+            Some(return_type) => return_type.to_string(),
+            None => String::new(),
+          },
+          "is_static": method.metadata.is_static,
+          "is_public": method.metadata.is_public,
+        })
+      }
+      Statement::Property(property) => {
+        json!({
+          "type": "Property",
+          "name": property.name.span.literal,
+          "initializer": match &property.initializer {
+            Some(initializer) => initializer.to_json(),
+            None => json!(null),
+          },
+          "type_annotation": property.type_annotation.to_string(),
+          "is_static": property.metadata.is_static,
+          "is_public": property.metadata.is_public,
         })
       }
     }

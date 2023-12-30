@@ -4,75 +4,72 @@ use lexer::token::Token;
 use enums::data_type::DataType;
 use serde_json::json;
 
-use super::Statement;
+use super::{
+  Statement,
+  function::{FunctionParameter, FunctionDecorator},
+};
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum FunctionDecorator {
-  Extern(Token),
-  Custom,
+pub struct MethodMetadata {
+  pub is_public: bool,
+  pub is_static: bool,
+  pub is_contructor: bool,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct FunctionParameter {
-  pub name: Token,
-  pub data_type: DataType,
-  // TODO:
-  pub is_mutable: bool,
-  pub is_reference: bool,
-}
-
-impl FunctionParameter {
-  pub fn new(name: Token, data_type: DataType, is_mutable: bool) -> Self {
+impl MethodMetadata {
+  pub fn new(is_public: bool, is_static: bool, is_contructor: bool) -> Self {
     Self {
-      name,
-      data_type,
-      is_mutable,
-      is_reference: false,
+      is_public,
+      is_static,
+      is_contructor,
     }
   }
 
   pub fn to_json(&self) -> serde_json::Value {
     json!({
-      "name": self.name.span.literal,
-      "data_type": self.data_type.to_string(),
-      "is_mutable": self.is_mutable,
-      "is_reference": self.is_reference,
+      "is_public": self.is_public,
+      "is_static": self.is_static,
+      "is_constructor": self.is_contructor,
     })
   }
 }
 
-impl Display for FunctionParameter {
+impl Display for MethodMetadata {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "{}: {}", self.name.span.literal, self.data_type)
+    write!(
+      f,
+      "is_public: {}, is_static: {}, is_constructor: {}",
+      self.is_public, self.is_static, self.is_contructor
+    )
   }
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct FunctionStatement {
+pub struct MethodStatement {
   pub name: Token,
   pub parameters: Vec<FunctionParameter>,
   pub body: Vec<Statement>,
   pub return_type: Option<DataType>,
-  pub is_exported: bool,
   pub annotations: Vec<FunctionDecorator>,
+  pub metadata: MethodMetadata,
 }
 
-impl FunctionStatement {
+impl MethodStatement {
   pub fn new(
     name: Token,
     parameters: Vec<FunctionParameter>,
     body: Vec<Statement>,
     return_type: Option<DataType>,
-    is_exported: bool,
     annotations: Vec<FunctionDecorator>,
+    metadata: MethodMetadata,
   ) -> Self {
     Self {
       name,
       parameters,
       body,
       return_type,
-      is_exported,
       annotations,
+      metadata,
     }
   }
 }

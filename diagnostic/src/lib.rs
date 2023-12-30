@@ -126,11 +126,7 @@ impl DiagnosticList {
     token: &Token,
   ) {
     self.report_error(
-      format!(
-        "Cannot assign {} to {}",
-        value_type.to_string(),
-        expression_type.to_string()
-      ),
+      format!("Cannot assign {} to {}", value_type, expression_type),
       token.span.clone(),
     );
   }
@@ -215,9 +211,7 @@ impl DiagnosticList {
     self.report_error(
       format!(
         "Expected '{}' after {}', found '{}'",
-        expected.to_string(),
-        expression.kind.to_string(),
-        token.kind.to_string()
+        expected, expression.kind, token.kind
       ),
       token.span.clone(),
     );
@@ -225,11 +219,7 @@ impl DiagnosticList {
 
   pub fn report_expected_token(&mut self, expected: &TokenType, token: &Token) {
     self.report_error(
-      format!(
-        "Expected '{}', found '{}'",
-        expected.to_string(),
-        token.kind.to_string()
-      ),
+      format!("Expected '{}', found '{}'", expected, token.kind,),
       token.span.clone(),
     );
   }
@@ -241,11 +231,7 @@ impl DiagnosticList {
     token: &Token,
   ) {
     self.report_error(
-      format!(
-        "Expected {} arguments, found {}",
-        expected.to_string(),
-        found.to_string()
-      ),
+      format!("Expected {} arguments, found {}", expected, found,),
       token.span.clone(),
     );
   }
@@ -254,7 +240,7 @@ impl DiagnosticList {
     self.report_error(
       format!(
         "Expected return type after function, found '{}'",
-        token.kind.to_string()
+        token.kind
       ),
       token.span.clone(),
     );
@@ -310,29 +296,21 @@ impl DiagnosticList {
 
   fn report_variable_already_defined(&mut self, name: &str, data_type: &DataType) {
     self.report_error(
-      format!(
-        "Variable '{}' was already defined as '{}'",
-        name,
-        data_type.to_string()
-      ),
+      format!("Variable '{}' was already defined as '{}'", name, data_type),
       TextSpan::new(0, 0, 0, name.to_string(), 0, "".to_string()),
     );
   }
 
   fn report_type_mismatch(&mut self, expected: &DataType, found: &DataType, token: &Token) {
     self.report_error(
-      format!(
-        "Type mismatch, expected '{}', found '{}'",
-        expected.to_string(),
-        found.to_string()
-      ),
+      format!("Type mismatch, expected '{}', found '{}'", expected, found),
       token.span.clone(),
     );
   }
 
   fn report_type_mismatch_unary(&mut self, right: &DataType, token: &Token) {
     self.report_error(
-      format!("Type mismatch, expected '{}'", right.to_string()),
+      format!("Type mismatch, expected '{}'", right),
       token.span.clone(),
     );
   }
@@ -379,17 +357,16 @@ impl DiagnosticList {
     self.report_error(
       format!(
         "Argument type mismatch, expected '{}', found '{}'",
-        expected.to_string(),
-        recived.to_string()
+        expected, recived
       ),
       token.span.clone(),
     );
   }
 
-  fn report_class_already_defined(&mut self, name: &str) {
+  fn report_class_already_defined(&mut self, name: &Token) {
     self.report_error(
-      format!("Class '{}' was already defined", name),
-      TextSpan::new(0, 0, 0, name.to_string(), 0, "".to_string()),
+      format!("Class '{}' was already defined", name.span.literal),
+      name.span.clone(),
     );
   }
 
@@ -465,5 +442,9 @@ impl DiagnosticList {
       format!("Invalid condition, expected boolean"),
       token.span.clone(),
     )
+  }
+
+  fn report_method_outside_class(&mut self, token: &Token) {
+    self.report_error(format!("Method outside class"), token.span.clone())
   }
 }
