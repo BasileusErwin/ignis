@@ -62,6 +62,8 @@ pub enum DiagnosticError {
   PropertyAlreadyDefined(Token),
   UndefinedClass(Token),
   UndefinedMethods(Token),
+  PrivateProperty(Token),
+  ImmutableProperty(Token),
 }
 
 impl DiagnosticError {
@@ -155,9 +157,7 @@ impl DiagnosticError {
         DiagnosticError::ContinueOutsideLoop(token)
       }
       AnalyzerDiagnosticError::InvalidCondition(token) => DiagnosticError::InvalidCondition(token),
-      AnalyzerDiagnosticError::NotAClass(token) => {
-        DiagnosticError::NotAClass(token)
-      }
+      AnalyzerDiagnosticError::NotAClass(token) => DiagnosticError::NotAClass(token),
       AnalyzerDiagnosticError::UndefinedProperty(token) => {
         DiagnosticError::UndefinedProperty(token)
       }
@@ -175,6 +175,10 @@ impl DiagnosticError {
       }
       AnalyzerDiagnosticError::UndefinedClass(token) => DiagnosticError::UndefinedClass(token),
       AnalyzerDiagnosticError::UndefinedMethods(token) => DiagnosticError::UndefinedMethods(token),
+      AnalyzerDiagnosticError::PrivateProperty(token) => DiagnosticError::PrivateProperty(token),
+      AnalyzerDiagnosticError::ImmutableProperty(token) => {
+        DiagnosticError::ImmutableProperty(token)
+      }
     }
   }
 
@@ -373,6 +377,12 @@ impl DiagnosticError {
       }
       DiagnosticError::UndefinedMethods(token) => {
         diagnostics.report_undefined_methods(token);
+      }
+      DiagnosticError::PrivateProperty(token) => {
+        diagnostics.report_private_property(token);
+      }
+      DiagnosticError::ImmutableProperty(token) => {
+        diagnostics.report_immutable_property(token);
       }
     }
   }

@@ -249,6 +249,7 @@ impl TranspilerToLua {
       }
       IRInstruction::Get(_) => todo!(),
         IRInstruction::ClassInstance(_) => todo!(),
+        IRInstruction::Set(_) => todo!(),
     };
 
     code

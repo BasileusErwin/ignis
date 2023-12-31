@@ -486,4 +486,18 @@ impl DiagnosticList {
       token.span.clone(),
     );
   }
+
+  fn report_private_property(&mut self, token: &Token) {
+    self.report_error(
+      format!("Private property '{}'", token.span.literal),
+      token.span.clone(),
+    );
+  }
+
+  fn report_immutable_property(&mut self, token: &Token) {
+    self.report_error(
+      format!("Immutable property '{}'", token.span.literal),
+      token.span.clone(),
+    );
+  }
 }

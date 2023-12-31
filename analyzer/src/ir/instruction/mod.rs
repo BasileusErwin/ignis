@@ -1,4 +1,4 @@
-use serde_json::{json, Value};
+use serde_json::{Value};
 
 pub mod assign;
 pub mod binary;
@@ -13,6 +13,7 @@ pub mod ir_break;
 pub mod ir_continue;
 pub mod ir_for_in;
 pub mod ir_get;
+pub mod ir_set;
 pub mod ir_if;
 pub mod ir_println;
 pub mod ir_return;
@@ -28,7 +29,7 @@ use self::{
   logical::IRLogical, ir_if::IRIf, ir_while::IRWhile, function::IRFunction, call::IRCall,
   class::IRClass, assign::IRAssign, ir_return::IRReturn, ternary::IRTernary, ir_for_in::IRForIn,
   ir_array::IRArray, import::IRImport, ir_break::IRBreak, ir_continue::IRContinue, ir_get::IRGet,
-  class_instance::IRClassInstance,
+  class_instance::IRClassInstance, ir_set::IRSet,
 };
 
 #[derive(Debug, Clone)]
@@ -54,6 +55,7 @@ pub enum IRInstruction {
   Break(IRBreak),
   Continue(IRContinue),
   ClassInstance(IRClassInstance),
+  Set(IRSet),
 }
 
 impl IRInstruction {
@@ -91,6 +93,7 @@ impl IRInstructionTrait for IRInstruction {
       IRInstruction::Break(instruction) => instruction.to_json(),
       IRInstruction::Continue(instruction) => instruction.to_json(),
       IRInstruction::ClassInstance(instruction) => instruction.to_json(),
+      IRInstruction::Set(set) => set.to_json()
     }
   }
 }

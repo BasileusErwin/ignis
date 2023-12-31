@@ -46,4 +46,6 @@ pub enum AnalyzerDiagnosticError {
   PropertyAlreadyDefined(Box<Token>),
 UndefinedClass(Token),
 UndefinedMethods(Token),
+PrivateProperty(Token),
+ImmutableProperty(Token),
 }

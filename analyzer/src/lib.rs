@@ -2,7 +2,8 @@ pub mod analyzer_error;
 pub mod analyzer_value;
 pub mod ir;
 
-use std::{ collections::HashMap,
+use std::{
+  collections::HashMap,
   vec, fs,
   fmt::{Display, Formatter},
 };
@@ -14,7 +15,7 @@ use ast::{
   expression::{
     binary::Binary, Expression, literal::Literal, unary::Unary, grouping::Grouping,
     logical::Logical, assign::Assign, variable::VariableExpression, ternary::Ternary, call::Call,
-    array::Array, new::NewExpression, get::Get,
+    array::Array, new::NewExpression, get::Get, set::Set,
   },
   statement::{
     Statement,
@@ -57,7 +58,9 @@ use ir::{
     ir_break::IRBreak,
     ir_continue::IRContinue,
     ir_get::IRGet,
-    class::IRClass, class_instance::IRClassInstance,
+    class::IRClass,
+    class_instance::IRClassInstance,
+    ir_set::IRSet,
   },
   instruction_type::IRInstructionType,
 };
@@ -411,11 +414,8 @@ impl Visitor<AnalyzerResult> for Analyzer {
       arguments.push(arg_type);
     }
 
-    let instruction = IRInstruction::Call(IRCall::new(
-      function.name,
-      arguments,
-      function.return_type,
-    ));
+    let instruction =
+      IRInstruction::Call(IRCall::new(function.name, arguments, function.return_type));
 
     Ok(instruction)
   }
@@ -478,8 +478,8 @@ impl Visitor<AnalyzerResult> for Analyzer {
         false,
         false,
         true,
-        false,
-        false,
+        variable.metadata.is_static,
+        variable.metadata.is_public,
         false,
       ),
     );
@@ -931,16 +931,14 @@ impl Visitor<AnalyzerResult> for Analyzer {
       _ => return Err(AnalyzerDiagnosticError::NotAClass(expression.name.clone())),
     };
 
-    let class = self.find_class_in_ir(
-      match object.data_type {
-        DataType::ClassType(name) => name,
-        _ => return Err(AnalyzerDiagnosticError::NotAClass(expression.name.clone())),
-      }
-    );
+    let class = self.find_class_in_ir(match object.data_type {
+      DataType::ClassType(name) => name,
+      _ => return Err(AnalyzerDiagnosticError::NotAClass(expression.name.clone())),
+    });
 
     if class.is_none() {
       return Err(AnalyzerDiagnosticError::UndefinedClass(
-      expression.name.clone(),
+        expression.name.clone(),
       ));
     }
 
@@ -1138,8 +1136,8 @@ impl Visitor<AnalyzerResult> for Analyzer {
         false,
         false,
         true,
-        false,
-        false,
+        statement.metadata.is_static,
+        statement.metadata.is_public,
         false,
       ),
     );
@@ -1149,6 +1147,71 @@ impl Visitor<AnalyzerResult> for Analyzer {
     self.scopes_variables.push(variable.clone());
 
     Ok(IRInstruction::Variable(variable.clone()))
+  }
+
+  fn visit_set_expression(&mut self, set: &Set) -> AnalyzerResult {
+    let value = self.analyzer(&set.value)?;
+
+    let object = self.analyzer(&set.object)?;
+
+    let object = match object {
+      IRInstruction::Variable(c) => c,
+      _ => return Err(AnalyzerDiagnosticError::NotAClass(*set.name.clone())),
+    };
+
+    let class = self.find_class_in_ir(match object.data_type {
+      DataType::ClassType(name) => name,
+      _ => return Err(AnalyzerDiagnosticError::NotAClass(*set.name.clone())),
+    });
+
+    if class.is_none() {
+      return Err(AnalyzerDiagnosticError::UndefinedClass(*set.name.clone()));
+    }
+
+    let class = class.unwrap();
+
+    if class.properties.is_empty() {
+      return Err(AnalyzerDiagnosticError::UndefinedProperty(
+        *set.name.clone(),
+      ));
+    }
+
+    let class_binding = class.clone();
+
+    let property = class_binding
+      .properties
+      .iter()
+      .find(|p| p.name == set.name.span.literal);
+
+    if property.is_none() {
+      return Err(AnalyzerDiagnosticError::UndefinedProperty(
+        *set.name.clone(),
+      ));
+    }
+
+    if !property.unwrap().metadata.is_public {
+      return Err(AnalyzerDiagnosticError::PrivateProperty(*set.name.clone()));
+    }
+
+    if !property.unwrap().metadata.is_mutable {
+      return Err(AnalyzerDiagnosticError::ImmutableProperty(
+        *set.name.clone(),
+      ));
+    }
+
+    let class_instance = self.find_class_instance(class.name);
+
+    if class_instance.is_none() {
+      return Err(AnalyzerDiagnosticError::UndefinedClass(*set.name.clone()));
+    }
+
+    let instruction = IRInstruction::Set(IRSet::new(
+      set.name.span.literal.clone(),
+      Box::new(value),
+      Box::new(class_instance.unwrap()),
+    ));
+
+    Ok(instruction)
   }
 }
 
@@ -1605,7 +1668,7 @@ impl Analyzer {
   fn find_matching_constructor(
     &self,
     class: &IRClass,
-    arguments: &Vec<IRInstruction>,
+    arguments: &[IRInstruction],
   ) -> Option<IRFunction> {
     let constructors = class.methods.iter().filter(|m| m.metadata.is_constructor);
     for constructor in constructors {
@@ -1645,5 +1708,33 @@ impl Analyzer {
     }
 
     true
+  }
+
+  fn find_class_instance(&self, instance_name: String) -> Option<IRClassInstance> {
+    if self.scopes_variables.is_empty() {
+      return None;
+    }
+
+    let scopes_variables = &self.scopes_variables;
+
+    let mut class_instance = None;
+
+    for variable in scopes_variables {
+      if variable.data_type != DataType::ClassType(instance_name.clone()) {
+        continue;
+      }
+
+      let value = variable.value.clone();
+
+      match value.unwrap().as_ref() {
+        IRInstruction::ClassInstance(c) if c.name == instance_name => {
+          class_instance = Some(c.clone());
+          break;
+        }
+        _ => (),
+      }
+    }
+
+    class_instance
   }
 }
